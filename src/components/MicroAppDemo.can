@@ -1,0 +1,49 @@
+import { signal } from '../reactivity/signal';
+
+component MicroAppDemo {
+    var title = "Checkout Service";
+    var src = "https://micro-frontends.org";
+    var isLoading = signal(true);
+
+    function onLoad() {
+        this.isLoading.value = false;
+    }
+
+    function reload() {
+        this.isLoading.value = true;
+        // Force iframe reload by re-assigning src
+        var iframe = this.shadowRoot.querySelector('iframe');
+        if(iframe) iframe.src = iframe.src;
+    }
+
+    var template = `
+        <div class="micro-frame">
+            <div class="header">
+                <span class="badge">Micro-App: {{title}}</span>
+                <button class="reload-btn" onclick="() => this.reload()">&#x21bb;</button>
+                 
+            </div>
+            <div class="frame-container">
+                <div c-if="isLoading" class="loader">Loading external content...</div>
+                <iframe src="{{src}}" onload="() => this.onLoad()" class="{{isLoading.value ? 'hidden' : ''}}"></iframe>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.micro-frame { border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fff; display: flex; flex-direction: column; height: 300px; }
+.header { background: #f8f9fa; padding: 8px 12px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+.badge { background: #ff9800; color: white; padding: 2px 8px; font-size: 0.75rem; border-radius: 4px; font-weight: bold; text-transform: uppercase; }
+.reload-btn { background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #666; padding: 0; }
+.reload-btn:hover { color: #333; }
+
+.frame-container { position: relative; flex: 1; background: #fafafa; }
+iframe { width: 100%; height: 100%; border: none; display: block; }
+iframe.hidden { opacity: 0; }
+
+.loader {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #999; font-family: sans-serif; font-size: 0.9rem;
+}
+</style>

@@ -1,0 +1,36 @@
+import { signal, watch } from '../runtime-helpers';
+
+component WatcherDemo {
+    var count = signal(0);
+    var log = signal([]);
+
+    // Watch for changes
+    var stopWatch = watch(
+        () => this.count.value, 
+        (newVal, oldVal) => {
+            const msg = `Count changed from ${oldVal} to ${newVal}`;
+            console.log(msg);
+            this.log.value = [...this.log.value, msg];
+        }
+    );
+
+    function increment() {
+        this.count.value++;
+    }
+
+    function onUnmounted() {
+        console.log("Component removed");
+        stopWatch(); // Clean up the watcher
+    }
+    
+    var template = `
+        <div>
+            <h3>Watcher Demo</h3>
+            <p>Count: {{count}}</p>
+            <button @click="increment">Increment</button>
+            <ul>
+                <li c-for="msg in log">{{msg}}</li>
+            </ul>
+        </div>
+    `;
+}

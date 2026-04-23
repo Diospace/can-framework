@@ -1,0 +1,46 @@
+import { signal } from '../reactivity/signal';
+
+component I18nDemo {
+    var currentLocale = signal("en");
+    
+    // Mock translation dictionary
+    var translations = {
+        en: { hello: "Hello World", welcome: "Welcome to our application." },
+        es: { hello: "Hola Mundo", welcome: "Bienvenido a nuestra aplicación." },
+        fr: { hello: "Bonjour le monde", welcome: "Bienvenue sur notre application." },
+        de: { hello: "Hallo Welt", welcome: "Willkommen in unserer Anwendung." }
+    };
+
+    function setLocale(lang) {
+        this.currentLocale.value = lang;
+    }
+
+    var template = `
+        <div class="i18n-widget">
+            <div class="controls">
+                <button class="{{currentLocale.value === 'en' ? 'active' : ''}}" onclick="() => this.setLocale('en')">EN</button>
+                <button class="{{currentLocale.value === 'es' ? 'active' : ''}}" onclick="() => this.setLocale('es')">ES</button>
+                <button class="{{currentLocale.value === 'fr' ? 'active' : ''}}" onclick="() => this.setLocale('fr')">FR</button>
+                <button class="{{currentLocale.value === 'de' ? 'active' : ''}}" onclick="() => this.setLocale('de')">DE</button>
+            </div>
+            
+            <div class="content">
+                <h3>{{translations[currentLocale.value].hello}}</h3>
+                <p>{{translations[currentLocale.value].welcome}}</p>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.i18n-widget { border: 1px solid #eee; border-radius: 8px; padding: 20px; font-family: system-ui, sans-serif; max-width: 400px; }
+.controls { display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px; }
+button { padding: 6px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; font-weight: 600; color: #555; }
+button:hover { background: #f5f5f5; }
+button.active { background: #2c3e50; color: white; border-color: #2c3e50; }
+
+.content h3 { margin: 0 0 10px 0; color: #2c3e50; font-size: 1.5rem; }
+.content p { margin: 0; color: #666; line-height: 1.5; }
+</style>
+}
+</style>

@@ -1,0 +1,24 @@
+
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+build/
+.temp/
+
+# OS generated files
+.DS_Store
+.vscode/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# NPM Secrets
+.npmrc
+
+# Logs
+*.log
+npm-debug.log*

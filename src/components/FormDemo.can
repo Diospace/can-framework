@@ -1,0 +1,56 @@
+import { Form, Input } from '../runtime-core/formComponents';
+import { signal } from '../reactivity/signal';
+
+component FormDemo {
+    var formData = signal({});
+    var isSuccess = signal(false);
+
+    function handleSubmit(values) {
+        this.formData.value = values;
+        this.isSuccess.value = true;
+        setTimeout(() => this.isSuccess.value = false, 3000);
+    }
+
+    var template = `
+        <div class="smart-form-widget">
+            <header>
+                <h3>Login</h3>
+                <p>Secure authentication</p>
+            </header>
+
+            <div c-if="isSuccess" class="alert success">
+                Login successful! Welcome back.
+            </div>
+
+            <form onSubmit="{ (v) => this.handleSubmit(v) }">
+                <div class="field-group">
+                    <input name="email" label="Email Address" rules="required|email" placeholder="john@example.com" />
+                </div>
+                <div class="field-group">
+                    <input name="password" label="Password" type="password" rules="required|min:6" placeholder="••••••••" />
+                </div>
+                
+                <button type="submit" class="submit-btn">
+                    Sign In
+                </button>
+            </form>
+        </div>
+    `;
+}
+
+<style scoped>
+.smart-form-widget { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 320px; font-family: 'Segoe UI', sans-serif; }
+header { text-align: center; margin-bottom: 1.5rem; }
+h3 { margin: 0; color: #333; }
+p { margin: 5px 0 0; color: #666; font-size: 0.9rem; }
+
+.field-group { margin-bottom: 1rem; }
+/* Targeting the custom input component's internal styles if possible, or wrapper */
+input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+
+.submit-btn { width: 100%; padding: 10px; background: #6200ea; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+.submit-btn:hover { background: #5000aa; }
+
+.alert { padding: 10px; border-radius: 4px; margin-bottom: 1rem; font-size: 0.9rem; text-align: center; }
+.success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+</style>

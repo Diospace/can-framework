@@ -1,0 +1,71 @@
+{
+	"name": "Can Dark",
+	"type": "dark",
+	"colors": {
+		"editor.background": "#1E1E1E",
+		"editor.foreground": "#628a8d"
+	},
+	"tokenColors": [
+		{
+			"scope": ["keyword", "storage"],
+			"settings": {
+				"foreground": "#5370a7"
+			}
+		},
+		{
+			"scope": ["keyword.other.can", "source.can entity.name.function", "source.can support.function"],
+			"settings": {
+				"foreground": "#6b8564"
+			}
+		},
+		{
+			"scope": ["source.can entity.name.type", "source.can support.class"],
+			"settings": {
+				"foreground": "#4EC9B0",
+				"fontStyle": "bold"
+			}
+		},
+		{
+			"scope": ["source.can variable", "source.can meta.definition.variable"],
+			"settings": {
+				"foreground": "#9CDCFE"
+			}
+		},
+		{
+			"scope": "variable.other.css",
+			"settings": {
+				"foreground": "#9CDCFE"
+			}
+		},
+		{
+			"scope": "string",
+			"settings": {
+				"foreground": "#CE9178"
+			}
+		},
+		{
+			"scope": ["meta.interpolation.can", "meta.template.expression"],
+			"settings": {
+				"foreground": "#FF9E64"
+			}
+		},
+		{
+			"scope": "entity.name.tag",
+			"settings": {
+				"foreground": "#569CD6"
+			}
+		},
+		{
+			"scope": "comment",
+			"settings": {
+				"foreground": "#6A9955"
+			}
+		},
+		{
+			"scope": "entity.other.attribute-name",
+			"settings": {
+				"foreground": "#9CDCFE"
+			}
+		}
+	]
+}

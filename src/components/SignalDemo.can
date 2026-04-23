@@ -1,0 +1,54 @@
+import { signal } from '../reactivity/signal';
+
+component SignalDemo {
+    var valueA = signal(10);
+    var valueB = signal(5);
+    var result = signal(50);
+
+    function update(type, val) {
+        if (type === 'a') this.valueA.value = parseInt(val) || 0;
+        if (type === 'b') this.valueB.value = parseInt(val) || 0;
+        
+        // Reactive calculation
+        this.result.value = this.valueA.value * this.valueB.value;
+    }
+
+    var template = `
+        <div class="calc-widget">
+            <h3>Reactive Calculator</h3>
+            <div class="inputs">
+                <div class="group">
+                    <label>Value A</label>
+                    <input type="number" value="{{valueA}}" oninput="(e) => this.update('a', e.target.value)" />
+                </div>
+                <div class="operator">&times;</div>
+                <div class="group">
+                    <label>Value B</label>
+                    <input type="number" value="{{valueB}}" oninput="(e) => this.update('b', e.target.value)" />
+                </div>
+            </div>
+            <div class="result-display">
+                = {{result}}
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.calc-widget { background: #2c3e50; padding: 25px; border-radius: 12px; color: white; font-family: 'Segoe UI', sans-serif; max-width: 350px; }
+h3 { margin-top: 0; color: #ecf0f1; font-weight: 400; font-size: 1.1rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; }
+.inputs { display: flex; align-items: center; gap: 10px; margin: 20px 0; }
+.group { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+label { font-size: 0.8rem; color: #bdc3c7; }
+input { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 8px; border-radius: 4px; width: 100%; box-sizing: border-box; font-size: 1.1rem; text-align: center; }
+.operator { font-size: 1.5rem; color: #e67e22; font-weight: bold; padding-top: 15px; }
+.result-display { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 6px; text-align: right; font-size: 2rem; font-weight: bold; color: #2ecc71; }
+
+button {
+    background: #1565c0;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+</style>

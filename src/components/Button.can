@@ -1,0 +1,90 @@
+import { signal } from '../reactivity/signal';
+
+component MyButton {
+    // Props with defaults
+    var props={
+        label: 'Button',
+        variant: 'primary',
+        size: 'md',
+        icon: '',
+        disabled: false
+    }
+    
+    // Internal state
+    var isRipple = signal(false);
+
+    function onClick(e) {
+        if (this.disabled) return;
+        
+        // Ripple effect logic
+        this.isRipple.value = true;
+        setTimeout(() => this.isRipple.value = false, 400);
+        
+        console.log(`[MyButton] Clicked: ${this.label}`);
+    }
+
+    var template = `
+        
+        <button class="btn {{props.variant}} {{props.size}} {{props.disabled ? 'disabled' : ''}}" 
+                onclick="(e) => this.onClick(e)">
+            <span c-if="props.icon" class="icon">{{props.icon}}</span>
+            <span class="content">{{props.label}}</span>
+            <span c-if="isRipple" class="ripple"></span>
+        </button>
+    `;
+}
+
+<style>
+:host {
+    display: inline-block;
+    margin: 4px;
+    --button-bg: #6200ea;
+    --button-text: #ffffff;
+    --primary: #6200ea;
+    --secondary: #03dac6;
+    --danger: #b00020;
+    --text-on-primary: #ffffff;
+}
+.btn {
+    position: relative;
+    overflow: hidden;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    outline: none;
+}
+
+/* Sizes */
+.sm { padding: 6px 12px; font-size: 0.8rem; }
+.md { padding: 10px 20px; font-size: 1rem; }
+.lg { padding: 14px 28px; font-size: 1.2rem; }
+
+/* Variants */
+.primary { background: var(--primary); color: var(--text-on-primary); box-shadow: 0 2px 4px rgba(98, 0, 234, 0.3); }
+.primary:hover { background: #5000d0; box-shadow: 0 4px 8px rgba(98, 0, 234, 0.4); }
+
+.secondary { background: var(--secondary); color: #000; }
+.secondary:hover { background: #018786; }
+
+.outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+.outline:hover { background: rgba(98, 0, 234, 0.05); }
+
+.danger { background: var(--danger); color: white; }
+
+/* Disabled */
+.disabled { opacity: 0.6; cursor: not-allowed; pointer-events: none; }
+
+/* Ripple */
+.ripple { position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; background: rgba(255,255,255,0.3); border-radius: 50%; transform: translate(-50%, -50%) scale(0); animation: rippleAnim 0.4s linear; }
+@keyframes rippleAnim {
+    to { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+}
+</style>
+defineCustomElement('can-button', MyButton, (instance) => instance.render());

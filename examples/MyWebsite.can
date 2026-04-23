@@ -1,0 +1,100 @@
+import { signal } from '../reactivity/signal';
+import { useStore, mapState } from '../store/Store';
+import '../components/About'; // Import About.can to register <can-about>
+import '../components/Button'; // Import Button.can to register <can-button>
+
+component MyWebsite {
+    // Clean state access via mapState
+    var { count } = mapState(['count']);
+    var store = useStore(); 
+    
+    var appTitle = signal('My Awesome Can App');
+    var showAbout = signal(false);
+    
+    // Local reactive state for the welcome message
+    var username = signal('Developer');
+
+    function toggleAbout() {
+        this.showAbout.value = !this.showAbout.value;
+    }
+
+    function incrementGlobal() {
+        this.store.commit('increment');
+    }
+
+    var template = `
+        <div class="website-wrapper">
+            <header>
+                <h1>{{ appTitle }}</h1>
+                <div class="user-greeting">
+                    Welcome, <span class="highlight">{{ username }}</span>
+                </div>
+            </header>
+
+            <main>
+                <section class="state-demo">
+                    <div class="card">
+                        <h3>Two-Way Binding (.trim)</h3>
+                        <input c-model.trim="username" placeholder="Change your name..." />
+                    </div>
+
+                    <div class="card">
+                        <h3>Global Store (Persistent)</h3>
+                        <p>Total Clicks: <span class="counter">{{ count }}</span></p>
+                        <can-button label="Increment Global" @click="incrementGlobal"></can-button>
+                    </div>
+                </section>
+
+                <section class="content">
+                    <can-button 
+                        :label="showAbout ? 'Hide Details' : 'View About Section'" 
+                        @click="toggleAbout">
+                    </can-button>
+                    
+                    <div c-if="showAbout" class="about-container">
+                        <can-about></can-about>
+                    </div>
+                </section>
+            </main>
+
+            <footer>
+                <p>Built with <strong>Can Framework</strong> v1.0</p>
+            </footer>
+        </div>
+    `;
+}
+
+<style scoped>
+:host {
+    display: block;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    background: #f0f2f5;
+    min-height: 100vh;
+    padding: 40px 20px;
+}
+.website-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 25px rgba(0,0,0,0.08);
+    padding: 40px;
+}
+header { text-align: center; margin-bottom: 40px; }
+h1 { color: #1a73e8; margin-bottom: 10px; }
+.highlight { color: #1a73e8; font-weight: 700; }
+.state-demo { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+.card { background: #f8f9fa; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+.counter { font-size: 1.5rem; font-weight: bold; color: #d93025; }
+input { 
+    width: 100%; 
+    padding: 10px; 
+    border: 2px solid #ddd; 
+    border-radius: 6px; 
+    margin-top: 10px;
+    box-sizing: border-box;
+}
+input:focus { border-color: #1a73e8; outline: none; }
+.about-container { margin-top: 20px; padding: 20px; border-left: 4px solid #1a73e8; background: #e8f0fe; }
+footer { margin-top: 50px; text-align: center; color: #70757a; font-size: 0.9rem; }
+</style>

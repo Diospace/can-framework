@@ -1,0 +1,25 @@
+
+import { defineCustomElement } from '../runtime-helpers';
+
+component MyNav {
+    var template = `
+        <nav class="navbar">
+            <div class="brand">CanFW</div>
+            <div class="links">
+                <a href="#">Docs</a>
+                <a href="#">Examples</a>
+                <a href="#">Blog</a>
+            </div>
+        </nav>
+    `;
+}
+
+<style scoped>
+.navbar { display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: #2c3e50; color: white; border-radius: 4px; font-family: sans-serif; }
+.brand { font-weight: bold; font-size: 1.2rem; }
+.links a { color: #ecf0f1; text-decoration: none; margin-left: 15px; font-size: 0.9rem; }
+.links a:hover { color: #3498db; }
+</style>
+
+defineCustomElement('can-navbar', MyNav);
+

@@ -1,0 +1,10 @@
+.vscode/**
+.git/**
+src/**
+**/*.ts
+vite.config.js
+ide-extension/build_icon.js
+ide-extension/*.reg
+ide-extension/Can.sublime-syntax
+node_modules/**
+!node_modules/htmlparser2/**

@@ -1,0 +1,57 @@
+// Import components to register their custom elements as a side-effect.
+import './Button';
+import './NavBar';
+import './TodoList';
+import './About';
+import { defineCustomElement } from '../runtime-helpers';
+
+component WebComponentDemo {
+    var template = `
+        <div class="wc-playground">
+            <header>
+                <h3>Web Component Integration</h3>
+                <p>Seamlessly mixing native Custom Elements with Can Components. <code>&lt;can-button&gt;</code> uses Shadow DOM for style isolation.</p>
+            </header>
+            
+            <div class="component-showcase">
+                <div class="showcase-item">
+                    <span class="tag">Navigation</span>
+                    <can-nav></can-nav>
+                </div>
+
+                <div class="showcase-item">
+                    <span class="tag">Shadow DOM Button</span>
+                    <div class="preview-box">
+                        <can-button label="Native Button" variant="primary"></can-button>
+                        <can-button label="Outline" variant="outline"></can-button>
+                    </div>
+                </div>
+
+                <div class="showcase-item">
+                    <span class="tag">Complex Widget</span>
+                    <can-todolist></can-todolist>
+                </div>
+
+                <div class="showcase-item">
+                    <span class="tag">About Component</span>
+                    <can-about></can-about>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.wc-playground { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+header { margin-bottom: 30px; border-bottom: 2px solid #6200ea; padding-bottom: 10px; }
+h3 { color: #6200ea; margin: 0; }
+p { color: #666; margin: 5px 0 0; }
+
+.component-showcase { display: flex; flex-direction: column; gap: 30px; }
+.showcase-item { border: 1px solid #eee; border-radius: 8px; padding: 20px; position: relative; background: #fafafa; }
+.tag { position: absolute; top: -10px; left: 20px; background: #6200ea; color: white; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+.preview-box { display: flex; gap: 10px; align-items: center; padding: 10px; background: white; border-radius: 4px; }
+</style>
+
+} // End of component WebComponentDemo block
+defineCustomElement('can-webcomponent-demo', WebComponentDemo, (instance) => instance.render());

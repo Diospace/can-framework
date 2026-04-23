@@ -1,0 +1,143 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Can",
+	"scopeName": "source.can",
+	"patterns": [
+		{ "include": "#comments" },
+		{ "include": "#component" },
+		{ "include": "#style" },
+		{ "include": "#imports" },
+		{ "include": "#keywords" },
+		{ "include": "#strings" }
+	],
+	"repository": {
+		"component": {
+			"begin": "\\b(component)\\s+([A-Za-z0-9_]+)\\s*\\{",
+			"beginCaptures": {
+				"1": { "name": "keyword.other.can" },
+				"2": { "name": "entity.name.type.class.can" }
+			},
+			"end": "\\}",
+			"patterns": [
+				{ "include": "#comments" },
+				{ "include": "#template" },
+				{ "include": "#style" },
+				{ "include": "#methods" },
+				{ "include": "#variables" },
+				{ "include": "#strings" },
+				{ "include": "#member-access" },
+				{ "include": "#numeric" },
+				{ "include": "#constants" },
+				{ "include": "#template-expression" },
+				{ "include": "#keywords" }
+			]
+		},
+		"imports": {
+			"begin": "\\b(import)\\b",
+			"beginCaptures": {
+				"1": { "name": "keyword.control.import.can" }
+			},
+			"end": "(;)",
+			"patterns": [
+				{ "include": "source.js" }
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"match": "\\b(if|else|return|import|from|async|await|for|while|try|catch|switch|case|default|break|continue|new|delete|typeof|void|instanceof)\\b",
+					"name": "keyword.control.can"
+				},
+				{
+					"match": "\\b(var|let|const|class)\\b",
+					"name": "storage.type.can"
+				},
+				{
+					"match": "\\b(component|signal)\\b",
+					"name": "keyword.other.can"
+				},
+				{
+					"match": "\\b(function)\\s+([a-zA-Z0-9_]+)",
+					"captures": {
+						"1": { "name": "storage.type.function.can" },
+						"2": { "name": "entity.name.function.can" }
+					}
+				},
+				{
+					"match": "\\b(function)\\b",
+					"name": "storage.type.function.can"
+				}
+			]
+		},
+		"variables": {
+			"begin": "\\b(var|let|const)\\b",
+			"beginCaptures": {
+				"1": { "name": "storage.type.can" }
+			},
+			"end": "(;)",
+			"patterns": [
+				{ "include": "#keywords" },
+				{ "include": "source.js" }
+			]
+		},
+		"methods": {
+			"match": "\\b(function)\\s+([a-zA-Z0-9_]+)\\s*(\\()",
+			"captures": {
+				"1": { "name": "storage.type.function.can" },
+				"2": { "name": "entity.name.function.can" },
+				"3": { "name": "punctuation.definition.parameters.begin.can" }
+			}
+		},
+		"member-access": {
+			"match": "\\b(this)\\.([a-zA-Z0-9_]+)",
+			"captures": {
+				"1": { "name": "variable.language.this.can" },
+				"2": { "name": "variable.other.property.can" }
+			}
+		},
+		"numeric": {
+			"match": "\\b\\d+(\\.\\d+)?\\b",
+			"name": "constant.numeric.can"
+		},
+		"constants": {
+			"match": "\\b(true|false|null|undefined)\\b",
+			"name": "constant.language.can"
+		},
+		"strings": {
+			"patterns": [
+				{ "name": "string.quoted.double.can", "begin": "\"", "end": "\"", "patterns": [{ "name": "constant.character.escape.can", "match": "\\\\." }] },
+				{ "name": "string.quoted.single.can", "begin": "'", "end": "'", "patterns": [{ "name": "constant.character.escape.can", "match": "\\\\." }] }
+			]
+		},
+		"comments": {
+			"patterns": [
+				{ "name": "comment.block.can", "begin": "/\\*", "end": "\\*/" },
+				{ "name": "comment.line.double-slash.can", "match": "//.*$" }
+			]
+		},
+		"template": {
+			"begin": "\\b(var|let|const)\\s+(template)\\s*=\\s*(`)",
+			"beginCaptures": {
+				"1": { "name": "storage.type.can" },
+				"2": { "name": "variable.other.property.can" },
+				"3": { "name": "string.template.can" }
+			},
+			"end": "`",
+			"name": "string.template.can",
+			"patterns": [
+				{ "include": "#template-expression" },
+				{ "include": "#interpolation" },
+				{ "include": "text.html.basic" }
+			]
+		},
+		"interpolation": { "name": "meta.interpolation.can", "begin": "\\{\\{", "end": "\\}\\}", "patterns": [{ "include": "source.js" }] },
+		"template-expression": { "name": "meta.template.expression.can", "begin": "\\$\\{", "end": "\\}", "patterns": [{ "include": "source.js" }] },
+		"style": {
+			"begin": "(<)(style)(?:\\s+(scoped|lang=\"[a-z]+\"))*\\s*(>)",
+			"beginCaptures": { "1": { "name": "punctuation.definition.tag.begin.can" }, "2": { "name": "entity.name.tag.style.can" }, "3": { "name": "entity.other.attribute-name.can" }, "4": { "name": "punctuation.definition.tag.end.can" } },
+			"end": "(</)(style)(>)",
+			"endCaptures": { "1": { "name": "punctuation.definition.tag.begin.can" }, "2": { "name": "entity.name.tag.style.can" }, "3": { "name": "punctuation.definition.tag.end.can" } },
+			"patterns": [{ "include": "source.css" }]
+		}
+	}
+}

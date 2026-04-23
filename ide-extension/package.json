@@ -1,0 +1,36 @@
+{
+  "name": "can-framework-support",
+  "displayName": "Can Framework Support",
+  "description": "Language support and themes for the Can Framework",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Themes"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "can",
+      "aliases": ["Can", "can"],
+      "extensions": [".can"],
+      "configuration": "./language-configuration.json"
+    }],
+    "grammars": [{
+      "language": "can",
+      "scopeName": "source.can",
+      "path": "./syntaxes/can.tmLanguage.json"
+    }],
+    "themes": [{
+      "label": "Can Dark",
+      "uiTheme": "vs-dark",
+      "path": "./themes/can-color-theme.json"
+    }],
+    "iconThemes": [{
+      "id": "can-icon-theme",
+      "label": "Can Icons",
+      "path": "./themes/can-icon-theme.json"
+    }]
+  }
+}

@@ -1,0 +1,68 @@
+import { signal, readonly } from '../runtime-helpers';
+
+component DeepDemo {
+    // Deeply reactive configuration object
+    var config = signal({
+        app: { 
+            name: "CanApp", 
+            version: "1.0.0",
+            features: { darkMode: true, notifications: false } 
+        },
+        user: { role: "admin" }
+    });
+
+    // 2. Readonly proxy
+    var readOnlyConfig = readonly(this.config.value);
+
+    function toggleFeature(key) {
+        // Deep update triggers reactivity
+        this.config.value.app.features[key] = !this.config.value.app.features[key];
+    }
+
+    function updateName(e) {
+        this.config.value.app.name = e.target.value;
+    }
+
+    var template = `
+        <div class="settings-panel">
+            <h3>App Configuration</h3>
+            
+            <div class="control-group">
+                <label>App Name</label>
+                <input value="{{config.value.app.name}}" oninput="(e) => this.updateName(e)" />
+            </div>
+
+            <div class="control-group">
+                <label>Features</label>
+                <div class="toggles">
+                    <button class="toggle {{config.value.app.features.darkMode ? 'on' : 'off'}}" 
+                            onclick="() => this.toggleFeature('darkMode')">
+                        Dark Mode: {{config.value.app.features.darkMode ? 'ON' : 'OFF'}}
+                    </button>
+                    <button class="toggle {{config.value.app.features.notifications ? 'on' : 'off'}}" 
+                            onclick="() => this.toggleFeature('notifications')">
+                        Notifications: {{config.value.app.features.notifications ? 'ON' : 'OFF'}}
+                    </button>
+                </div>
+            </div>
+
+            <div class="debug-view">
+                <pre>{{JSON.stringify(config.value, null, 2)}}</pre>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.settings-panel { background: #282c34; color: #abb2bf; padding: 20px; border-radius: 8px; font-family: monospace; max-width: 400px; }
+h3 { color: #61afef; margin-top: 0; border-bottom: 1px solid #3e4451; padding-bottom: 10px; }
+.control-group { margin-bottom: 15px; }
+label { display: block; color: #5c6370; font-size: 0.85rem; margin-bottom: 5px; }
+input { background: #3e4451; border: 1px solid #181a1f; color: white; padding: 8px; border-radius: 4px; width: 100%; box-sizing: border-box; }
+.toggles { display: flex; gap: 10px; }
+.toggle { flex: 1; padding: 8px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.toggle.on { background: #98c379; color: #1e222a; }
+.toggle.off { background: #e06c75; color: white; }
+.debug-view { background: #1e222a; padding: 10px; border-radius: 4px; font-size: 0.8rem; overflow-x: auto; }
+pre { margin: 0; }
+</style>

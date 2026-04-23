@@ -1,0 +1,37 @@
+import { signal } from '../reactivity/signal';
+
+component AsyncWidget {
+    var data = signal("Loading...");
+    var isLoading = signal(true);
+
+    async function onBeforeMount() {
+        // Simulate API call
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        this.data.value = "Data loaded from API!";
+        this.isLoading.value = false;
+    }
+
+    function reload() {
+        this.isLoading.value = true;
+        this.data.value = "Reloading...";
+        this.onBeforeMount();
+    }
+
+    var template = `
+        <div class="widget">
+            <h3>Async Data</h3>
+            <p c-if="isLoading">⏳ Please wait...</p>
+            <p>{{data}}</p>
+            <button onclick="reload()">Reload Data</button>
+        </div>
+    `;
+}
+
+<style scoped>
+.widget {
+    border: 1px dashed #999;
+    padding: 15px;
+    background: #f9f9f9;
+}
+</style>

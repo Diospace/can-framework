@@ -1,0 +1,21 @@
+component CanNav {
+    var props = {
+        title: 'Default Nav'
+    };
+
+    var template = `
+        <nav>
+            <span class="brand">{{ props.title }}</span>
+            <ul>
+                <li>Home</li>
+                <li>Docs</li>
+            </ul>
+        </nav>
+    `;
+}
+
+<style scoped>
+nav { display: flex; justify-content: space-between; padding: 1rem; background: #333; color: white; border-radius: 8px; }
+.brand { font-weight: bold; }
+ul { display: flex; gap: 1rem; list-style: none; margin: 0; }
+</style>

@@ -1,0 +1,32 @@
+import { signal, onMounted, onUnmounted } from '../runtime-helpers';
+
+component Timer {
+    var count = signal(0);
+    var timerId = null;
+
+    // Lifecycle hooks are now composable!
+    const onMounted =()=>{
+        super();
+        onMounted(() => {
+        console.log('Timer mounted');
+        this.timerId = setInterval(() => {
+            this.count.value++;
+        }, 1000);
+    });
+    }
+
+   const  onUnmounted=()=>{
+      super();
+     onUnmounted(() => {
+        console.log('Timer stopped');
+        clearInterval(this.timerId);
+    });
+   }
+
+    var template = `
+        <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+            <h3>Lifecycle Timer</h3>
+            <div>Seconds: {{this.count.value}}</div>
+        </div>
+    `;
+}

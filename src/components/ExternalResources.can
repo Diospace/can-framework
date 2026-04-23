@@ -1,0 +1,60 @@
+import { useScriptTag, useFavicon, signal } from '../runtime-helpers';
+
+component ExternalResources {
+    // 1. Load External Script
+    var { isLoading, error } = useScriptTag('https://code.jquery.com/jquery-3.6.0.min.js');
+
+    // 2. Dynamic Favicon
+    var defaultIcon = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚀</text></svg>';
+    var alertIcon = 'data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚠️</text></svg>';
+    
+    var icon = signal(defaultIcon);
+    useFavicon(this.icon);
+
+    function toggleIcon() {
+        this.icon.value = this.icon.value === this.defaultIcon ? this.alertIcon : this.defaultIcon;
+    }
+
+    var template = `
+        <div class="integration-manager">
+            <h3>Integration Status</h3>
+            
+            <div class="resource-item">
+                <div class="info">
+                    <strong>jQuery Library</strong>
+                    <span class="url">code.jquery.com</span>
+                </div>
+                <div class="status">
+                    <span c-if="isLoading" class="badge loading">Loading...</span>
+                    <span c-if="error" class="badge error">Failed</span>
+                    <span c-if="!isLoading && !error" class="badge success">Active</span>
+                </div>
+            </div>
+
+            <div class="resource-item">
+                <div class="info">
+                    <strong>Tab Icon</strong>
+                    <span class="url">Dynamic Favicon</span>
+                </div>
+                <button onclick="() => this.toggleIcon()">
+                    {{icon.value === defaultIcon ? 'Set Alert ⚠️' : 'Set Normal 🚀'}}
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.integration-manager { border: 1px solid #e0e0e0; border-radius: 8px; padding: 20px; font-family: sans-serif; max-width: 400px; }
+h3 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; color: #333; }
+.resource-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 0; border-bottom: 1px solid #f9f9f9; }
+.resource-item:last-child { border-bottom: none; }
+.info { display: flex; flex-direction: column; }
+.url { font-size: 0.8rem; color: #999; }
+.badge { padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; }
+.loading { background: #fff3cd; color: #856404; }
+.success { background: #d4edda; color: #155724; }
+.error { background: #f8d7da; color: #721c24; }
+button { padding: 6px 12px; cursor: pointer; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px; }
+button:hover { background: #e2e6ea; }
+</style>

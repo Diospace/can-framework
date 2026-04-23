@@ -1,0 +1,32 @@
+import { signal, useDebounce, useClipboard, useOnline } from '../runtime-helpers';
+
+component SearchPage {
+    var searchQuery = signal("");
+    // 1. Debounce input to prevent API spam
+    var debouncedQuery = useDebounce(this.searchQuery, 500);
+
+    // 2. Network status
+    var isOnline = useOnline();
+
+    // 3. Clipboard interaction
+    var { copy, text: copiedText } = useClipboard();
+
+    function copyResult() {
+        this.copy("Search Result: " + this.debouncedQuery.value);
+    }
+
+    var template = `
+        <div>
+            <h3>Search Page</h3>
+            <div c-if="!isOnline" style="color: red">You are offline!</div>
+
+            <input c-model="searchQuery" placeholder="Search..." />
+            
+            <p>Typing: {{searchQuery}}</p>
+            <p>Debounced (API call would happen here): <strong>{{debouncedQuery}}</strong></p>
+
+            <button @click="copyResult">Copy Result</button>
+            <span c-if="copiedText.value">Copied: {{copiedText}}</span>
+        </div>
+    `;
+}

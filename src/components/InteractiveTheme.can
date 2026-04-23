@@ -1,0 +1,33 @@
+import { useMouse, useCssVar, usePreferredDark } from '../runtime-helpers';
+
+component InteractiveTheme {
+    // 1. Track Mouse
+    var { x, y } = useMouse();
+
+    // 2. Detect Dark Mode
+    var isDark = usePreferredDark();
+
+    // 3. Dynamic CSS Variable (e.g., --theme-color defined in CSS)
+    var themeColor = useCssVar('--theme-color');
+
+    function toggleColor() {
+        // Writing to the signal updates the CSS variable on <html>
+        this.themeColor.value = this.themeColor.value === '#ffffff' ? '#000000' : '#ffffff';
+    }
+
+    var template = `
+        <div style="background-color: var(--theme-color, #eee); padding: 20px; transition: background 0.3s;">
+            <h2>Interaction Demo</h2>
+            
+            <p>Mouse Position: X: {{x}}, Y: {{y}}</p>
+            
+            <p>System Dark Mode: {{isDark}}</p>
+            
+            <button @click="toggleColor">Toggle Theme Color (CSS Var)</button>
+            
+            <div style="position: fixed; top: {{y}}px; left: {{x}}px; pointer-events: none; font-size: 24px;">
+                🖱️
+            </div>
+        </div>
+    `;
+}

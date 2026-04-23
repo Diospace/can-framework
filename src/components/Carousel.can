@@ -1,0 +1,548 @@
+import { signal, computed, effect, onMounted, onUnmounted, useSwipe, useWebP, useParallax, useSound } from '../runtime-helpers';
+
+component Carousel {
+    var props = [
+        'images', 'transitionTime', 'transitionDirectionX', 'transitionDirectionY',
+        'transitionZoom', 'bullets', 'bulletColor', 'bulletsHide', 'arrows',
+        'arrowsHide', 'swipe', 'keyboard', 'kenBurns', 'progressBar', 'auto',
+        'autoTime', 'autoPauseOnHover', 'webp'
+    ];
+
+    var currentIndex = signal(0);
+    var containerRef = signal(null);
+    var isLocked = signal(false);
+    var isHovered = signal(false);
+    var autoPaused = signal(false);
+    var isVisible = signal(false); // For IntersectionObserver
+    var parsedSlides = signal([]);
+    var loadedSlides = signal(new Set());
+    var finishedLoadingSlides = signal(new Set());
+    var kenBurnsClasses = signal([]);
+    var autoProgress = signal(0);
+    var manualZoom = signal(1);
+    var isGrayscale = signal(false);
+    
+    // Composable Hooks
+    var webpSupported = useWebP();
+    var swipe = useSwipe(this.containerRef);
+    var parallax = useParallax(this.containerRef);
+    var sound = useSound('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', { volume: 0.5 });
+
+    // Ken Burns Effect
+    // This effect needs to be a method or called in onMounted to ensure 'this' context
+    // and that 'slides' is initialized.
+    function setupKenBurnsEffect() {
+        if (this.slides.value.length > 0 && this.props.kenBurns) {
+            const animations = ['kenburns-tl', 'kenburns-tr', 'kenburns-br', 'kenburns-bl'];
+            this.kenBurnsClasses.value = this.slides.value.map(() => animations[Math.floor(Math.random() * animations.length)]);
+        }
+    }
+
+    // Computed Props
+    var slides = computed(() => {
+        const raw = this.props.images || this.parsedSlides.value;
+        return raw.map(img => typeof img === 'string' ? { imageUrl: img } : img);
+    });
+
+    var currentSlide = computed(() => this.slides.value[this.currentIndex.value]);
+
+    // Internal State for Transition
+    var transitionState = signal({
+        opacity: 1,
+        top: 0,
+        left: 0,
+        scale: 1,
+        zIndex: 2,
+        visibility: 'visible'
+    });
+
+    var nextZIndex = signal(0);
+    var nextOpacity = signal(0);
+
+    // Autoplay Logic
+    var auto = {
+        timerId: null,
+        rafId: null,
+        startTime: 0,
+        remainingTime: 0,
+    };
+
+    function startAuto() {
+        if (!this.props.auto) return; // auto is already a boolean
+        this.pauseAuto(); // Clear any existing timers
+        this.auto.remainingTime = this.props.autoTime || 10000;
+        this.autoPaused.value = true; // So resumeAuto will run
+        this.resumeAuto();
+    }
+
+    function stopAuto() {
+        clearTimeout(this.auto.timerId);
+        cancelAnimationFrame(this.auto.rafId);
+        this.auto.timerId = null;
+        this.auto.rafId = null;
+        this.autoProgress.value = 0;
+    }
+
+    function pauseAuto() {
+        if (this.props.auto && !this.autoPaused.value) { // auto is already a boolean
+            this.autoPaused.value = true;
+            this.auto.remainingTime -= (performance.now() - this.auto.startTime);
+            clearTimeout(this.auto.timerId);
+            cancelAnimationFrame(this.auto.rafId);
+            this.auto.timerId = null;
+            this.auto.rafId = null;
+        }
+    }
+
+    function resumeAuto() {
+        if (this.props.auto && this.autoPaused.value) { // auto is already a boolean
+            this.autoPaused.value = false;
+            
+            if (this.auto.remainingTime <= 0) {
+                this.auto.remainingTime = this.props.autoTime || 10000;
+            }
+            
+            this.auto.startTime = performance.now();
+
+            this.auto.timerId = setTimeout(() => {
+                this.next();
+            }, this.auto.remainingTime);
+
+            if (this.props.progressBar) {
+                const autoDuration = this.props.autoTime || 10000;
+                const animateProgress = () => {
+                    if (this.autoPaused.value || !this.auto.timerId) return;
+                    const elapsed = performance.now() - this.auto.startTime;
+                    const currentProgress = ((autoDuration - (this.auto.remainingTime - elapsed)) / autoDuration) * 100;
+                    this.autoProgress.value = Math.min(currentProgress, 100);
+                    if (this.autoProgress.value < 100) this.auto.rafId = requestAnimationFrame(animateProgress);
+                };
+                animateProgress();
+            }
+        }
+    }
+
+    // Navigation Logic
+    function next() {
+        const nextIndex = (this.currentIndex.value + 1) % this.slides.value.length;
+        this.goTo(nextIndex);
+    }
+
+    function prev() {
+        const len = this.slides.value.length;
+        const prevIndex = this.currentIndex.value < 1 ? len - 1 : this.currentIndex.value - 1;
+        this.goTo(prevIndex);
+    }
+
+    function goTo(index) {
+        if (index === this.currentIndex.value || this.isLocked.value) return;
+
+        this.resetZoom(); 
+        this.sound.play();
+        this.pauseAuto();
+        this.isLocked.value = true;
+
+        // Prepare transition
+        const duration = this.props.transitionTime || 250;
+        const dirX = this.props.transitionDirectionX;
+        const dirY = this.props.transitionDirectionY;
+        const zoom = this.props.transitionZoom;
+
+        // Resolve Randoms
+        const x = dirX === 'random' ? ['left', 'right', null][Math.floor(Math.random() * 3)] : dirX;
+        const y = dirY === 'random' ? ['up', 'down', null][Math.floor(Math.random() * 3)] : dirY;
+        const z = zoom === 'random' ? ['in', 'out', null][Math.floor(Math.random() * 3)] : zoom;
+
+        // Animate
+        const start = performance.now();
+        
+        const animate = (time) => {
+            const elapsed = time - start;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Fade out current
+            this.transitionState.value = {
+                ...this.transitionState.value,
+                opacity: 1 - progress,
+                left: x === 'left' ? -progress * 100 : (x === 'right' ? progress * 100 : 0),
+                top: y === 'up' ? -progress * 100 : (y === 'down' ? progress * 100 : 0),
+                scale: z === 'in' ? 1 + progress * 0.5 : (z === 'out' ? 1 - progress * 0.2 : 1)
+            };
+
+            if (progress < 1) {
+                requestAnimationFrame(animate);
+            } else {
+                // Finish
+                this.currentIndex.value = index;
+                this.isLocked.value = false;
+                
+                // Reset Transition State
+                this.transitionState.value = {
+                    opacity: 1, top: 0, left: 0, scale: 1, zIndex: 2, visibility: 'visible'
+                };
+
+                if (!this.props.autoPauseOnHover || !this.isHovered.value) {
+                    this.startAuto();
+                }
+            }
+        };
+
+        requestAnimationFrame(animate);
+    }
+
+    // DOM Parsing
+    function parseDomImages() {
+        const children = Array.from(this.children);
+        const images = [];
+        
+        children.forEach(child => {
+            let img = null;
+            let link = null;
+
+            if (child.tagName === 'A') {
+                link = child;
+                const first = child.firstElementChild;
+                if (first && first.tagName === 'IMG') img = first;
+            } else if (child.tagName === 'IMG') {
+                img = child;
+            }
+
+            if (img) {
+                const slide = {
+                    imageUrl: img.src,
+                    alt: img.getAttribute('alt'),
+                    title: img.getAttribute('title'),
+                    textTitle: img.getAttribute('text-title'),
+                    textBody: img.getAttribute('text-body'),
+                    textPosition: img.getAttribute('text-position'),
+                    webpUrl: img.getAttribute('webp-url')
+                };
+                if (link) {
+                    slide.linkUrl = link.href;
+                    slide.linkNewTab = link.target === '_blank';
+                }
+                images.push(slide);
+            }
+        });
+        
+        if (images.length > 0) this.parsedSlides.value = images;
+    }
+
+    // Lazy Loading
+    function updateLoadedSlides() {
+        if (!this.isVisible.value) return;
+        const current = this.currentIndex.value;
+        const total = this.slides.value.length;
+        if (total === 0) return;
+
+        const toLoad = new Set(this.loadedSlides.value);
+        let changed = false;
+        
+        // Load current, prev, and next slides
+        [current, (current - 1 + total) % total, (current + 1) % total].forEach(idx => {
+            if (!toLoad.has(idx)) {
+                toLoad.add(idx);
+                changed = true;
+            }
+        });
+
+        if (changed) this.loadedSlides.value = toLoad;
+    }
+
+    function markAsLoaded(index) {
+        const currentSet = this.finishedLoadingSlides.value;
+        // No need to update if it's already there
+        if (currentSet.has(index)) return;
+
+        const newSet = new Set(currentSet);
+        newSet.add(index);
+        this.finishedLoadingSlides.value = newSet;
+
+        if (index === 0) this.resizeContainer();
+    }
+
+    // Responsive Height
+    function resizeContainer() {
+        const container = this.containerRef.value;
+        if (container && container.parentNode) {
+            container.style.width = container.parentNode.clientWidth + 'px';
+            
+            // Try to find the first image to get aspect ratio
+            const firstImg = container.querySelector('.vanilla-slider-image');
+            if (firstImg && firstImg.naturalHeight > 0) {
+                const imageXYRatio = firstImg.naturalWidth / firstImg.naturalHeight;
+                container.style.height = (container.clientWidth / imageXYRatio) + 'px';
+            }
+        }
+    }
+
+    // Lifecycle
+    function onMounted() {
+        if (!this.props.images || this.props.images.length === 0) {
+            this.parseDomImages();
+        }
+        
+        // Setup Ken Burns effect on mount
+        effect(() => this.setupKenBurnsEffect());
+
+        // Store observer instance for cleanup
+        this._intersectionObserver = new IntersectionObserver((entries) => {
+            this.isVisible.value = entries[0].isIntersecting;
+        }, { rootMargin: '50%' });
+        this._intersectionObserver.observe(this);
+
+        effect(() => this.updateLoadedSlides());
+
+        this._onResizeHandler = () => this.resizeContainer();
+        window.addEventListener('resize', this._onResizeHandler);
+        setTimeout(() => this.resizeContainer(), 100);
+
+        // Keyboard navigation
+        const onKeyDown = (e) => {
+            if (!this.props.keyboard || !this.isHovered.value) return;
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                this.prev();
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                this.next();
+            }
+        };
+        // Store the bound function to remove it later
+        this._onKeyDownHandler = onKeyDown;
+        window.addEventListener('keydown', this._onKeyDownHandler);
+
+        if (this.props.auto) this.startAuto();
+
+        // Swipe Listener
+        effect(() => {
+            if (this.props.swipe && this.swipe.direction.value) {
+                if (this.swipe.direction.value === 'left') this.next(); // Swipe left means go to next slide
+                if (this.swipe.direction.value === 'right') this.prev(); // Swipe right means go to previous slide
+            }
+        });
+    }
+
+    function onUnmounted() {
+        this.stopAuto();
+        if (this._intersectionObserver) {
+            this._intersectionObserver.disconnect();
+        }
+        window.removeEventListener('resize', this._onResizeHandler);
+        window.removeEventListener('keydown', this._onKeyDownHandler);
+    }
+ 
+    // Additional Functions
+    function toggleFullscreen() {
+        const container = this.containerRef.value;
+        if (!container) return;
+        
+        if (!document.fullscreenElement) {
+            container.requestFullscreen().catch(err => {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            document.exitFullscreen();
+        }
+    }
+
+    function toggleAuto() {
+        if (this.auto.timerId) {
+            this.stopAuto();
+            this.autoPaused.value = true;
+        } else {
+            this.autoPaused.value = false;
+            this.startAuto();
+        }
+    }
+
+    function shuffleSlides() {
+        const currentSlides = [...this.slides.value];
+        for (let i = currentSlides.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [currentSlides[i], currentSlides[j]] = [currentSlides[j], currentSlides[i]];
+        }
+        this.parsedSlides.value = currentSlides;
+        this.currentIndex.value = 0;
+    }
+
+    function copySlideUrl() {
+        const url = this.currentSlide.value?.imageUrl;
+        if (url) {
+            navigator.clipboard.writeText(url);
+            alert('Slide URL copied to clipboard!');
+        }
+    }
+
+    function zoomIn() {
+        this.manualZoom.value = Math.min(this.manualZoom.value + 0.2, 3);
+    }
+
+    function zoomOut() {
+        this.manualZoom.value = Math.max(this.manualZoom.value - 0.2, 0.5);
+    }
+
+    function resetZoom() {
+        this.manualZoom.value = 1;
+    }
+
+    function toggleGrayscale() {
+        this.isGrayscale.value = !this.isGrayscale.value;
+    }
+
+    function downloadImage() {
+        const url = this.currentSlide.value?.imageUrl;
+        if (!url) return;
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = url.split('/').pop() || 'carousel-image.jpg';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // Event Handlers
+    function onEnter() {
+        this.isHovered.value = true;
+        if (this.props.autoPauseOnHover) this.pauseAuto();
+    }
+
+    function onLeave() {
+        this.isHovered.value = false;
+        if (this.props.autoPauseOnHover) this.resumeAuto();
+    }
+
+    function openLink(slide) {
+        if (slide.linkUrl) {
+            if (slide.linkNewTab) window.open(slide.linkUrl, '_blank');
+            else window.location.href = slide.linkUrl;
+        }
+    }
+
+    var template = `
+        <div class="vanilla-slider-container" c-ref="containerRef" 
+             @mouseenter="onEnter" @mouseleave="onLeave">
+            
+            <!-- Utility Bar -->
+            <div class="utility-bar">
+                <button class="util-btn" @click="toggleFullscreen">⛶</button>
+                <button class="util-btn" @click="shuffleSlides">🎲</button>
+                <button class="util-btn" @click="copySlideUrl">🔗</button>
+                <button class="util-btn" @click="zoomIn">➕</button>
+                <button class="util-btn" @click="zoomOut">➖</button>
+                <button class="util-btn" @click="toggleGrayscale">🌓</button>
+                <button class="util-btn" @click="downloadImage">⬇</button>
+            </div>
+
+            <!-- Slides -->
+            <div c-for="(slide, index) in slides" 
+                 class="slide-wrapper"
+                 style="{{ index === currentIndex.value ? 'z-index: 2; opacity: ' + transitionState.value.opacity + '; transform: translate(' + transitionState.value.left + 'px, ' + transitionState.value.top + 'px) scale(' + (transitionState.value.scale * manualZoom.value) + ') perspective(1000px) rotateX(' + this.parallax.tilt.value + 'deg) rotateY(' + this.parallax.roll.value + 'deg); filter: ' + (isGrayscale.value ? 'grayscale(100%)' : 'none') + ';' : 'z-index: 0; visibility: hidden;' }}">
+
+                <!-- Loading Spinner -->
+                <div c-if="loadedSlides.value.has(index) && !finishedLoadingSlides.value.has(index)" class="spinner-overlay">
+                    <div class="spinner"></div>
+                </div>
+
+                <img 
+                    src="{{ loadedSlides.value.has(index) ? ((webpSupported.value && slide.webpUrl) ? slide.webpUrl : slide.imageUrl) : '' }}" 
+                    alt="{{slide.alt || ''}}"
+                    title="{{slide.title || ''}}"
+                    class="vanilla-slider-image {{ (this.props.kenBurns && index === currentIndex.value && !isLocked.value) ? this.kenBurnsClasses.value[index] : '' }}"
+                    @click="() => this.openLink(slide)"
+                    @load="() => this.markAsLoaded(index)"
+                    @error="() => this.markAsLoaded(index)"
+                />
+                
+                <!-- Text Overlay -->
+                <div c-if="index === currentIndex.value && (slide.textTitle || slide.textBody)" 
+                     class="vanilla-slider-text-overlay {{slide.textPosition || 'SW'}}"
+                     @click="() => this.openLink(slide)">
+                    <h1 c-if="slide.textTitle">{{slide.textTitle}}</h1>
+                    <h3 c-if="slide.textBody">{{slide.textBody}}</h3>
+                </div>
+            </div>
+
+            <!-- Arrows -->
+            <div c-if="this.props.arrows" class="arrows-container" style="opacity: {{ (this.props.arrowsHide && !isHovered.value) ? 0 : 1 }}">
+                <span class="vanilla-slider-arrow left" @click="prev">&#10094;</span>
+                <span class="vanilla-slider-arrow right" @click="next">&#10095;</span>
+            </div>
+
+            <!-- Bullets -->
+            <div c-if="this.props.bullets" class="vanilla-slider-bullet-container" style="opacity: {{ (this.props.bulletsHide && !isHovered.value) ? 0 : 1 }}">
+                <span c-for="(slide, index) in slides" 
+                      class="vanilla-slider-bullet"
+                      style="color: {{ index === currentIndex.value ? (this.props.bulletColor || 'red') : '#fff' }}"
+                      @click="() => this.goTo(index)">
+                    &bull;
+                </span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div c-if="this.props.auto && this.props.progressBar && !this.autoPaused.value" 
+                 class="vanilla-slider-progress-bar-container">
+                <div class="vanilla-slider-progress-bar" style="width: {{ autoProgress.value }}%"></div>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.vanilla-slider-container { position: relative; overflow: hidden; width: 100%; height: 400px; background: #000; transition: height 0.3s ease; }
+.slide-wrapper { position: absolute; top: 0; left: 0; width: 100%; height: 100%; will-change: transform, opacity; }
+.vanilla-slider-image { width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; transition: none; }
+
+.vanilla-slider-text-overlay { position: absolute; padding: 0 20px; color: #fff; text-shadow: 0 0 20px black; background-color: rgba(0,0,0,0.3); z-index: 6; transition: opacity 0.5s; }
+.vanilla-slider-text-overlay.SW { bottom: 20px; left: 20px; }
+.vanilla-slider-text-overlay.NW { top: 20px; left: 20px; }
+.vanilla-slider-text-overlay.SE { bottom: 20px; right: 20px; }
+.vanilla-slider-text-overlay.NE { top: 20px; right: 20px; }
+
+.arrows-container { position: absolute; top: 50%; width: 100%; display: flex; justify-content: space-between; transform: translateY(-50%); z-index: 10; pointer-events: none; transition: opacity 0.3s; }
+.vanilla-slider-arrow { cursor: pointer; color: #fff; font-size: 2.5em; font-weight: bold; text-shadow: 0 0 10px rgba(0,0,0,0.5); padding: 0 10px; pointer-events: auto; user-select: none; }
+
+.vanilla-slider-bullet-container { position: absolute; bottom: 10px; width: 100%; text-align: center; z-index: 10; transition: opacity 0.3s; }
+.vanilla-slider-bullet { cursor: pointer; font-size: 2em; margin: 0 5px; text-shadow: 0 0 5px rgba(0,0,0,0.5); user-select: none; }
+
+.spinner-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background-color: rgba(0, 0, 0, 0.5); z-index: 3; }
+.spinner { border: 4px solid rgba(255, 255, 255, 0.3); border-radius: 50%; border-top: 4px solid #fff; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.utility-bar { position: absolute; top: 10px; right: 10px; z-index: 15; display: flex; gap: 5px; opacity: 0; transition: opacity 0.3s; }
+.vanilla-slider-container:hover .utility-bar { opacity: 1; }
+.util-btn { background: rgba(0,0,0,0.5); color: #fff; border: none; border-radius: 4px; padding: 5px 10px; cursor: pointer; font-size: 1.2em; }
+.util-btn:hover { background: rgba(0,0,0,0.8); }
+
+/* Progress Bar */
+.vanilla-slider-progress-bar-container { position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background-color: rgba(0,0,0,0.2); z-index: 11; }
+.vanilla-slider-progress-bar { height: 100%; background-color: rgba(255,255,255,0.7); width: 0%; }
+
+/* Ken Burns Animations */
+.kenburns-tl { animation: kenburns-tl 20s infinite alternate; }
+.kenburns-tr { animation: kenburns-tr 20s infinite alternate; }
+.kenburns-br { animation: kenburns-br 20s infinite alternate; }
+.kenburns-bl { animation: kenburns-bl 20s infinite alternate; }
+
+@keyframes kenburns-tl {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.2) translate(-5%, -5%); }
+}
+@keyframes kenburns-tr {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.2) translate(5%, -5%); }
+}
+@keyframes kenburns-br {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.2) translate(5%, 5%); }
+}
+@keyframes kenburns-bl {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.2) translate(-5%, 5%); }
+}
+</style>

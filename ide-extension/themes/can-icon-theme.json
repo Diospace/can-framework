@@ -1,0 +1,10 @@
+{
+  "iconDefinitions": {
+    "_can_file": {
+      "iconPath": "../icons/can.png"
+    }
+  },
+  "fileExtensions": {
+    "can": "_can_file"
+  }
+}

@@ -1,0 +1,31 @@
+import { signal, useFocus, useHover, useGeolocation, useKeyModifier, cRef } from '../runtime-helpers';
+
+component InteractionDemo {
+    // 1. Focus & Hover
+    var inputRef = signal(null);
+    var { focused } = useFocus(this.inputRef);
+    var { isHovered } = useHover(this.inputRef);
+
+    // 2. Geolocation
+    var { coords, error } = useGeolocation();
+
+    // 3. Key Modifier
+    var shiftPressed = useKeyModifier('Shift');
+
+    var template = `
+        <div>
+            <h3>Interaction States</h3>
+            <input c-ref="inputRef" placeholder="Focus or Hover me" />
+            
+            <p>Focused: {{focused}}</p>
+            <p>Hovered: {{isHovered}}</p>
+            <p>Shift Key Pressed: {{shiftPressed}}</p>
+
+            <h3>Geolocation</h3>
+            <div c-if="error">Error: {{error.value.message}}</div>
+            <div c-else>
+                Lat: {{coords.value.latitude}}, Long: {{coords.value.longitude}}
+            </div>
+        </div>
+    `;
+}

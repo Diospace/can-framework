@@ -1,0 +1,38 @@
+import { signal } from '../src/reactivity/signal';
+import './Nav';
+import '../src/components/Button';
+
+component CanApp {
+    var title = signal('Welcome to Can Framework');
+    var clickCount = signal(0);
+
+    function handleAction() {
+        this.clickCount.value++;
+    }
+
+    var template = `
+        <div class="layout">
+            <can-nav title="My App Navigation"></can-nav>
+            
+            <main>
+                <h1>{{ title }}</h1>
+                <p>Parent State: {{ clickCount }}</p>
+
+                <!-- Passing reactive data to child prop 'label' -->
+                <can-button 
+                    :label="'Count is ' + clickCount" 
+                    @click="handleAction">
+                </can-button>
+
+                <!-- Passing static data -->
+                <can-button label="Static Label"></can-button>
+            </main>
+        </div>
+    `;
+}
+
+<style>
+.layout { padding: 20px; }
+main { margin-top: 40px; text-align: center; }
+h1 { color: #333; }
+</style>

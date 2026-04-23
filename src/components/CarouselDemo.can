@@ -1,0 +1,46 @@
+import { signal } from '../runtime-helpers';
+import { Carousel } from './Carousel.can';
+
+component CarouselDemo {
+    var images = signal([
+        { 
+            imageUrl: 'https://via.placeholder.com/800x400/ff0000/ffffff?text=Slide+1', 
+            textTitle: 'Slide 1', 
+            textBody: 'Welcome to the Carousel',
+            textPosition: 'SW'
+        },
+        { 
+            imageUrl: 'https://via.placeholder.com/800x400/00ff00/ffffff?text=Slide+2', 
+            textTitle: 'Slide 2', 
+            textBody: 'Features Transition Effects',
+            textPosition: 'NE'
+        },
+        { 
+            imageUrl: 'https://via.placeholder.com/800x400/0000ff/ffffff?text=Slide+3', 
+            textTitle: 'Slide 3', 
+            textBody: 'And Swipe Support!',
+            textPosition: 'SE'
+        }
+    ]);
+
+    
+
+    var template = `
+        <div style="max-width: 800px; margin: 0 auto;">
+            <h2>Can Framework Carousel</h2>
+            <Carousel 
+                images="{this.images.value}" 
+                auto="{true}" 
+                transitionTime="{500}"
+                transitionDirectionX="random"
+                transitionZoom="in"
+                bullets="{true}"
+                arrows="{true}"
+                swipe="{true}"
+                kenBurns="{true}"
+                progressBar="{true}"
+                keyboard="{true}"
+            ></Carousel>
+        </div>
+    `;
+}

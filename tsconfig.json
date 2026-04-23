@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "outDir": "dist",
+    "declaration": true,
+    "lib": ["ESNext", "DOM", "DOM.Iterable", "ES2015.Reflect"],
+    "experimentalDecorators": true, // Essential for decorators
+    "emitDecoratorMetadata": true,   // Essential for TypeORM to read decorator metadata
+    "strictPropertyInitialization": false, // Often needed with TypeORM entities if you don't initialize all properties in the constructor
+    "esModuleInterop": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+     "ignoreDeprecations": "5.0",
+    "types": ["node", "reflect-metadata"] 
+  },
+
+  "include": [
+    "src/**/*",
+    "api/**/*",
+    "examples/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}

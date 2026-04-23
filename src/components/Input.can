@@ -1,0 +1,33 @@
+import { signal } from '../reactivity/signal';
+
+component Input {
+    var modelValue = signal("");
+    var placeholder = "Enter text...";
+
+    function onInput(e) {
+        this.modelValue.value = e.target.value;
+        // Dispatch event so parent components can listen via onchange="..."
+        this.dispatchEvent(new CustomEvent('update:modelValue', { 
+            detail: this.modelValue.value,
+            bubbles: true,
+            composed: true
+        }));
+    }
+
+    var template = `
+        <div class="input-wrapper">
+            <input class="styled-input" value="{{modelValue}}" placeholder="{{placeholder}}" oninput="onInput(event)" />
+    
+        </div>
+    `;
+}
+
+<style scoped>
+.styled-input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+}
+</style>

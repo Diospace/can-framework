@@ -1,0 +1,161 @@
+{
+  "name": "can-framework",
+  "displayName": "Can Framework",
+  "description": "A modern, high-performance web framework using Signal-based reactivity and Single File Components.",
+  "publisher": "can-framework",
+  "version": "1.0.0",
+  "type": "module",
+  "icon": "ide-extension/icons/can.png",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Diospace/can-framework.git"
+  },
+  "homepage": "https://github.com/can-framework/can-language-support#readme",
+  "bugs": "https://github.com/can-framework/can-language-support/issues",
+  "bin": {
+    "can": "./dist/cli/index.mjs"
+  },
+  "main": "./dist/runtime-core/index.mjs",
+  "module": "./dist/runtime-core/index.mjs",
+  "types": "./dist/runtime-core/index.d.ts",
+  "files": [
+    "dist",
+    "ide-extension",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "can": "node ./dist/cli/index.mjs",
+    "build": "node scripts/build.js",
+    "dev": "node scripts/dev.js",
+    "prepublishOnly": "npm run build",
+    "postinstall": "npm run build && npm link",
+    "type-check": "tsc --noEmit",
+    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/cli/index.mjs --external:esbuild",
+    "api": "ts-node src/cli/build.ts api/index.ts api/routes.ts && node dist/api/index.mjs",
+    "api:dev": "ts-node api/index.ts",
+    "build:bundle": "webpack",
+    "build:cdn": "webpack --config webpack.config.cdn.cjs",
+    "build:cdn:modern": "node scripts/cdn/build-cdn.js",
+    "build:cdn:all": "npm run build:cdn && npm run build:cdn:modern",
+    "test": "vitest",
+    "vscode:prepublish": "npm run build",
+    "release": "node scripts/release.js"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "dependencies": {
+    "@types/htmlparser2": "^3.10.7",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "htmlparser2": "^10.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "png-to-ico": "^3.0.1",
+    "reflect-metadata": "^0.2.2",
+    "typeorm": "^0.3.28"
+  },
+  "peerDependencies": {
+    "typescript": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "typescript": {
+      "optional": false
+    }
+  },
+  "activationEvents": [
+    "onLanguage:can"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "can.showInfo",
+        "title": "Can: Show Extension Info"
+      }
+    ],
+    "languages": [
+      {
+        "id": "can",
+        "aliases": [
+          "Can",
+          "can"
+        ],
+        "extensions": [
+          ".can"
+        ],
+        "configuration": "./ide-extension/language-configuration.json",
+        "icon": {
+          "light": "./ide-extension/icons/can.png",
+          "dark": "./ide-extension/icons/can.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "can",
+        "scopeName": "source.can",
+        "path": "./ide-extension/syntaxes/can.tmLanguage.json",
+        "embeddedLanguages": {
+          "text.html.basic": "html",
+          "source.js": "javascript",
+          "source.css": "css"
+        }
+      }
+    ],
+    "snippets": [
+      {
+        "language": "can",
+        "path": "./ide-extension/snippets/can.code-snippets"
+      }
+    ],
+    "iconThemes": [
+      {
+        "id": "can-icon-theme",
+        "label": "Can Icons",
+        "path": "./ide-extension/themes/can-icon-theme.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "Can Dark",
+        "uiTheme": "vs-dark",
+        "path": "./ide-extension/themes/can-color-theme.json"
+      }
+    ]
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.6",
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-typescript": "^7.28.5",
+    "@types/babel__core": "^7.20.5",
+    "@types/babel__preset-env": "^7.10.0",
+    "@types/body-parser": "^1.19.2",
+    "@types/cors": "^2.8.13",
+    "@types/express": "^4.17.17",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^22.10.2",
+    "@types/pg": "^8.11.0",
+    "babel-loader": "^9.1.3",
+    "esbuild": "^0.27.3",
+    "happy-dom": "^12.0.0",
+    "ts-loader": "^9.5.1",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vite": "^7.3.0",
+    "vitest": "^1.2.0",
+    "webpack": "^5.106.2",
+    "webpack-cli": "^5.1.4"
+  }
+}

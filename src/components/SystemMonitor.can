@@ -1,0 +1,31 @@
+import { signal, useFps, useBattery, useWakeLock } from '../runtime-helpers';
+
+component SystemMonitor {
+    // 1. Performance
+    var fps = useFps();
+
+    // 2. Battery
+    var { battery, isSupported: hasBattery } = useBattery();
+
+    // 3. Wake Lock
+    var { isActive: isWakeLocked, request, release } = useWakeLock();
+
+    var template = `
+        <div>
+            <h3>System Monitor</h3>
+            <p>FPS: {{fps}}</p>
+            
+            <div c-if="hasBattery">
+                <p>Battery Level: {{ Math.round(battery.value.level * 100) }}%</p>
+                <p>Charging: {{ battery.value.charging ? 'Yes' : 'No' }}</p>
+            </div>
+            <div c-else>Battery API not supported</div>
+
+            <div>
+                <p>Screen Wake Lock: {{ isWakeLocked.value ? 'Active' : 'Inactive' }}</p>
+                <button @click="request" disabled="{{isWakeLocked}}">Enable Wake Lock</button>
+                <button @click="release" disabled="{{!isWakeLocked}}">Disable Wake Lock</button>
+            </div>
+        </div>
+    `;
+}

@@ -1,0 +1,47 @@
+import { createContext, useReducer, useLocalStorage, useToggle } from '../runtime-helpers';
+
+// 1. Type-safe Context
+const ThemeContext = createContext('theme', 'light');
+
+component ContextDemo {
+    // Provide value
+    ThemeContext.provide('dark');
+    
+    // 2. Local Storage
+    var preferences = useLocalStorage('user-prefs', { notifications: true });
+
+    // 3. Reducer for complex logic
+    var [count, dispatch] = useReducer((state, action) => {
+        switch (action) {
+            case 'inc': return state + 1;
+            case 'dec': return state - 1;
+            default: return state;
+        }
+    }, 0);
+
+    // 4. Toggle
+    var [isOpen, toggleModal] = useToggle(false);
+
+    // Consume context (in same component for demo, usually in child)
+    var theme = ThemeContext.use();
+
+    var template = `
+        <div style="background: {{theme === 'dark' ? '#333' : '#fff'}}; color: {{theme === 'dark' ? '#fff' : '#000'}}; padding: 20px;">
+            <h3>Context & Composables Demo</h3>
+            <p>Theme from Context: {{theme}}</p>
+            
+            <h4>Reducer Count: {{count}}</h4>
+            <button @click="() => this.dispatch('inc')">+</button>
+            <button @click="() => this.dispatch('dec')">-</button>
+            
+            <h4>Toggle</h4>
+            <button @click="toggleModal">Toggle Modal</button>
+            <div c-if="isOpen" style="border: 1px solid red; padding: 10px; margin-top: 10px;">
+                Modal is Open!
+            </div>
+
+            <h4>Local Storage</h4>
+            <p>Prefs: {{JSON.stringify(preferences.value)}}</p>
+        </div>
+    `;
+}

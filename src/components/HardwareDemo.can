@@ -1,0 +1,30 @@
+import { signal, useSpeechRecognition, useNetwork } from '../runtime-helpers';
+
+component HardwareDemo {
+    // 1. Voice to Text
+    var { isListening, result, start, stop, isSupported } = useSpeechRecognition();
+
+    // 2. Network Info
+    var network = useNetwork();
+
+    var template = `
+        <div>
+            <h3>Voice Dictation</h3>
+            <div c-if="!isSupported">Speech Recognition not supported in this browser.</div>
+            <div c-else>
+                <button @click="start" disabled="{{isListening}}">Start Listening</button>
+                <button @click="stop" disabled="{{!isListening}}">Stop</button>
+                <p>Transcript: {{result}}</p>
+                <p c-if="isListening" style="color: red;">Listening...</p>
+            </div>
+
+            <h3>Network Status</h3>
+            <ul>
+                <li>Online: {{network.value.online}}</li>
+                <li>Type: {{network.value.effectiveType}}</li>
+                <li>Downlink: {{network.value.downlink}} Mbps</li>
+                <li>RTT: {{network.value.rtt}} ms</li>
+            </ul>
+        </div>
+    `;
+}

@@ -1,0 +1,118 @@
+import { signal } from '../reactivity/signal';
+import { useSpring, animate } from '../runtime-core/animation';
+import { nextTick } from '../runtime-core/scheduler';
+
+component AnimationDemo {
+    // 1. Animate.css Integration
+    // Note: Ensure 'css/animate.css' is loaded in your project
+    var animEffect = signal("");
+    
+    async function triggerEffect(name) {
+        this.animEffect.value = "";
+        // Use nextTick to ensure the DOM has cleared the class before re-applying
+        await nextTick();
+        nextTick(() => {
+            this.animEffect.value = "animated " + name;
+        });
+    }
+
+    // 2. Spring Physics (useSpring)
+    var targetX = signal(0);
+    var springX = useSpring(this.targetX, { stiffness: 120, damping: 15 });
+
+    // 3. JS Keyframes (animate API)
+    var jsBoxRef = signal(null);
+    
+    function playJsAnim() {
+        if (this.jsBoxRef.value) {
+            animate({
+                targets: this.jsBoxRef.value,
+                translateX: 200,
+                rotate: 360,
+                backgroundColor: '#f1c40f',
+                duration: 1000,
+                direction: 'alternate',
+                loop: 2,
+                easing: 'ease-in-out'
+            });
+        }
+    }
+
+    var template = `
+        <div class="anim-demo-library">
+            <header>
+                <h2>Animation Library</h2>
+                <p>Showcase of <b>animate.css</b>, <b>useSpring</b>, and <b>animate()</b>.</p>
+            </header>
+
+            <div class="grid">
+                <!-- Animate.css -->
+                <div class="card">
+                    <h3>CSS Classes</h3>
+                    <div class="preview-area">
+                        <div class="box css-target {{animEffect}}">CSS</div>
+                    </div>
+                    <div class="controls">
+                        <button onclick="() => this.triggerEffect('bounce')">Bounce</button>
+                        <button onclick="() => this.triggerEffect('rubberBand')">RubberBand</button>
+                        <button onclick="() => this.triggerEffect('tada')">Tada</button>
+                        <button onclick="() => this.triggerEffect('wobble')">Wobble</button>
+                    </div>
+                </div>
+
+                <!-- Spring Physics -->
+                <div class="card">
+                    <h3>Spring Physics</h3>
+                    <div class="preview-area">
+                        <div class="box spring-target" style="transform: translateX({{springX}}px)">
+                            {{Math.round(springX.value)}}
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <button onclick="() => this.targetX.value = 0">0</button>
+                        <button onclick="() => this.targetX.value = 100">100</button>
+                        <button onclick="() => this.targetX.value = 200">200</button>
+                    </div>
+                </div>
+
+                <!-- JS Animation -->
+                <div class="card">
+                    <h3>JS Animation</h3>
+                    <div class="preview-area">
+                        <div c-ref="jsBoxRef" class="box js-target">JS</div>
+                    </div>
+                    <div class="controls">
+                        <button onclick="() => this.playJsAnim()">Animate</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+<style scoped>
+/* Ensure animate.css is loaded in your project */
+.anim-demo-library { font-family: sans-serif; padding: 20px; max-width: 900px; }
+header { margin-bottom: 20px; border-bottom: 1px solid #eee; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; }
+.card { border: 1px solid #eee; padding: 15px; border-radius: 8px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.preview-area { height: 120px; background: #f9f9f9; display: flex; align-items: center; padding: 0 20px; margin-bottom: 10px; overflow: hidden; }
+.box { width: 60px; height: 60px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+.css-target { background: #3498db; }
+.spring-target { background: #9b59b6; }
+.js-target { background: #e74c3c; }
+.controls { display: flex; flex-wrap: wrap; gap: 5px; }
+button { padding: 5px 10px; cursor: pointer; border: 1px solid #ccc; background: #fff; border-radius: 3px; }
+button:hover { background: #eee; }
+
+/* Fallback animations if animate.css is missing */
+.animated { animation-duration: 1s; animation-fill-mode: both; }
+@keyframes bounce { from, 20%, 53%, 80%, to { transform: translate3d(0,0,0); } 40%, 43% { transform: translate3d(0, -30px, 0); } 70% { transform: translate3d(0, -15px, 0); } 90% { transform: translate3d(0, -4px, 0); } }
+.bounce { animation-name: bounce; transform-origin: center bottom; }
+@keyframes rubberBand { from { transform: scale3d(1, 1, 1); } 30% { transform: scale3d(1.25, 0.75, 1); } 40% { transform: scale3d(0.75, 1.25, 1); } 50% { transform: scale3d(1.15, 0.85, 1); } 65% { transform: scale3d(0.95, 1.05, 1); } 75% { transform: scale3d(1.05, 0.95, 1); } to { transform: scale3d(1, 1, 1); } }
+.rubberBand { animation-name: rubberBand; }
+@keyframes tada { from { transform: scale3d(1, 1, 1); } 10%, 20% { transform: scale3d(0.9, 0.9, 0.9) rotate3d(0, 0, 1, -3deg); } 30%, 50%, 70%, 90% { transform: scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, 3deg); } 40%, 60%, 80% { transform: scale3d(1.1, 1.1, 1.1) rotate3d(0, 0, 1, -3deg); } to { transform: scale3d(1, 1, 1); } }
+.tada { animation-name: tada; }
+@keyframes wobble { from { transform: translate3d(0, 0, 0); } 15% { transform: translate3d(-25%, 0, 0) rotate3d(0, 0, 1, -5deg); } 30% { transform: translate3d(20%, 0, 0) rotate3d(0, 0, 1, 3deg); } 45% { transform: translate3d(-15%, 0, 0) rotate3d(0, 0, 1, -3deg); } 60% { transform: translate3d(10%, 0, 0) rotate3d(0, 0, 1, 2deg); } 75% { transform: translate3d(-5%, 0, 0) rotate3d(0, 0, 1, -1deg); } to { transform: translate3d(0, 0, 0); } }
+.wobble { animation-name: wobble; }
+</style>
+}

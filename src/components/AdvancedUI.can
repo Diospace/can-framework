@@ -1,0 +1,151 @@
+import { signal, useDraggable, useVirtualList, cRef } from '../runtime-helpers';
+
+component AdvancedUI {
+    // A reusable draggable panel with virtualized list content
+    var title = signal("Advanced UI");
+    var items = signal([]); 
+    var isOpen = signal(true);
+    var isMinimized = signal(false);
+
+    // Resize Logic
+    var width = signal(300);
+    var height = signal(300);
+
+    var startResize = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        var startX = e.clientX;
+        var startY = e.clientY;
+        var startWidth = this.width.value;
+        var startHeight = this.height.value;
+
+        var onMove = (e) => {
+            this.width.value = Math.max(200, startWidth + (e.clientX - startX));
+            this.height.value = Math.max(200, startHeight + (e.clientY - startY));
+        };
+        var onUp = () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    };
+
+    // Draggable Logic
+    var panelRef = signal(null);
+    var { x, y, isDragging } = useDraggable(this.panelRef);
+
+    // Virtual List Logic
+    var { scrollTop, visibleItems, totalHeight } = useVirtualList(this.items, { 
+        itemHeight: 40, 
+        containerHeight: this.height 
+    });
+
+    var template = `
+        <div class="advanced-ui-widget" style="display: {{isOpen.value ? 'block' : 'none'}}">
+            <div class="panel" c-ref="panelRef" style="transform: translate({{x}}px, {{y}}px); width: {{width}}px; height: {{isMinimized.value ? 'auto' : height.value + 'px'}}">
+                <div class="panel-header" style="cursor: {{isDragging.value ? 'grabbing' : 'grab'}}">
+                    <span class="title">{{title}}</span>
+                    <div class="header-controls">
+                        <button class="icon-btn" onclick="() => this.isMinimized.value = !this.isMinimized.value">{{isMinimized.value ? '&#9744;' : '&#9473;'}}</button>
+                        <button class="icon-btn close-btn" onclick="() => this.isOpen.value = false">&times;</button>
+                    </div>
+                </div>
+                
+                <div class="panel-body" style="display: {{isMinimized.value ? 'none' : 'block'}}" onscroll="(e) => this.scrollTop.value = e.target.scrollTop">
+                    <div class="virtual-container" style="height: {{totalHeight}}px">
+                        <div c-for="item in visibleItems" class="virtual-item" style="{{item.style}}">
+                            {{item.item}}
+                        </div>
+                        <div c-if="items.value.length === 0" class="empty-state">
+                            No items to display
+                        </div>
+                    </div>
+                </div>
+                <div class="resize-handle" style="display: {{isMinimized.value ? 'none' : 'block'}}" onmousedown="(e) => this.startResize(e)"></div>
+            </div>
+        </div>
+    `;
+
+<style scoped>
+.advanced-ui-widget {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+}
+.panel {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.panel-header {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+.title {
+    font-weight: 600;
+    color: #333;
+}
+.header-controls {
+    display: flex;
+    gap: 8px;
+}
+.icon-btn {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+}
+.icon-btn:hover {
+    color: #333;
+}
+.panel-body {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    background: #fff;
+}
+.virtual-container {
+    position: relative;
+    width: 100%;
+}
+.virtual-item {
+    position: absolute;
+    width: 100%;
+    padding: 0 15px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f5f5f5;
+    height: 40px;
+}
+.empty-state {
+    padding: 20px;
+    text-align: center;
+    color: #999;
+    margin-top: 20px;
+}
+.resize-handle {
+    width: 15px;
+    height: 15px;
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    cursor: se-resize;
+    background: linear-gradient(135deg, transparent 50%, #ccc 50%);
+}
+</style>
+}

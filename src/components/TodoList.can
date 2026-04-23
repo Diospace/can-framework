@@ -1,0 +1,70 @@
+import { signal } from '../reactivity/signal';
+import { defineCustomElement } from '../runtime-helpers';
+
+component TodoList {
+    // Reactive State
+    var newTask = signal("");
+    var todos = signal([
+        { id: 1, text: "Learn Can Framework" },
+        { id: 2, text: "Build a cool app" }
+    ]);
+
+    // Methods
+    function addTodo() {
+        if (this.newTask.value.trim() === "") return;
+        
+        // Update the array signal
+        this.todos.value = [...this.todos.value, { id: Date.now(), text: this.newTask.value }];
+        
+        // Clear the input
+        this.newTask.value = "";
+    }
+
+    function removeTodo(item) {
+        this.todos.value = this.todos.value.filter(t => t.id !== item.id);
+    }
+
+    // Template
+    var template = `
+        <div class="todo-container">
+            <h3>My Tasks</h3>
+            
+            <div class="input-group">
+                <input type="text" c-model="newTask" placeholder="Add a new task..." />
+                <button onclick="addTodo()">Add</button>
+            </div>
+
+            <ul>
+                <li c-for="item in todos">
+                    <span>{{item.text}}</span>
+                    <button class="delete-btn" onclick="removeTodo(item)">Delete</button>
+                </li>
+            </ul>
+        </div>
+    `;
+}
+
+<style scoped>
+.todo-container {
+    font-family: sans-serif;
+    border: 1px solid #e0e0e0;
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 400px;
+}
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.delete-btn {
+    background-color: #ff5252;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+</style>
+
+defineCustomElement('can-todolist', TodoList);

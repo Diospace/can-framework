@@ -1,0 +1,69 @@
+import { Timeline, signal } from '../runtime-helpers';
+
+component TimelineDemo {
+    var box1 = signal(null);
+    var box2 = signal(null);
+    var box3 = signal(null);
+
+    function playSequence() {
+        const tl = new Timeline();
+        
+        const b1 = this.box1.value;
+        const b2 = this.box2.value;
+        const b3 = this.box3.value;
+
+        if (!b1 || !b2 || !b3) return;
+
+        tl.add({
+            targets: b1,
+            translateX: 200,
+            duration: 800,
+            easing: 'ease-in-out'
+        })
+        .add({
+            targets: b2,
+            translateX: 200,
+            rotate: 180,
+            duration: 800,
+            easing: 'ease-in-out'
+        }, '-=600') // Start 600ms before the previous animation ends
+        .add({
+            targets: b3,
+            translateX: 200,
+            scale: 1.5,
+            duration: 800,
+            easing: 'ease-in-out'
+        }, '-=600');
+
+        tl.play();
+    }
+
+    var template = `
+        <div class="timeline-demo">
+            <h3>Timeline Sequence</h3>
+            <div class="controls">
+                <button @click="playSequence">Play Sequence</button>
+            </div>
+            
+            <div class="track">
+                <div c-ref="box1" class="box red">1</div>
+            </div>
+            <div class="track">
+                <div c-ref="box2" class="box green">2</div>
+            </div>
+            <div class="track">
+                <div c-ref="box3" class="box blue">3</div>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.timeline-demo { padding: 20px; border: 1px solid #ccc; border-radius: 8px; max-width: 500px; }
+.controls { margin-bottom: 20px; }
+.track { height: 60px; background: #f0f0f0; margin-bottom: 10px; border-radius: 4px; padding: 5px; position: relative; }
+.box { width: 50px; height: 50px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+.red { background: #ff5252; }
+.green { background: #4caf50; }
+.blue { background: #2196f3; }
+</style>

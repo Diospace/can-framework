@@ -1,0 +1,33 @@
+import { signal, useId } from '../runtime-helpers';
+
+component UserForm {
+    var age = signal(0);
+    var name = signal("");
+    var id = useId();
+
+    function save() {
+        // Emit a custom event with data
+        this.emit('save', { name: this.name.value, age: this.age.value });
+        alert(`Saved: ${this.name.value}, ${this.age.value}`);
+    }
+
+    var template = `
+        <div style="padding: 10px; border: 1px solid #eee;">
+            <h3>User Form (Modifiers & useId)</h3>
+            <div style="margin-bottom: 10px;">
+                <label for="{{id}}">Name: </label>
+                <!-- .trim modifier -->
+                <input id="{{id}}" c-model.trim="name" placeholder="Name (trimmed)" />
+            </div>
+
+            <div style="margin-bottom: 10px;">
+                <label>Age: </label>
+                <!-- .number modifier casts input to number -->
+                <input type="number" c-model.number="age" />
+            </div>
+
+            <button @click="save">Save</button>
+            <p>Preview: {{name}} ({{age}})</p>
+        </div>
+    `;
+}

@@ -1,0 +1,338 @@
+{
+	"New Component": {
+		"prefix": "component",
+		"body": [
+			"component ${1:Name} {",
+			"\tvar template = `",
+			"\t\t<div class=\"${2:container}\">",
+			"\t\t\t$0",
+			"\t\t</div>",
+			"\t`;",
+			"",
+			"\t<style scoped>",
+			"\t\t.$2 {",
+			"\t\t\t",
+			"\t\t}",
+			"\t</style>",
+			"}"
+		],
+		"description": "Create a new Can component structure"
+	},
+	"Reactive Signal": {
+		"prefix": "signal",
+		"body": [
+			"var ${1:name} = signal(${2:initialValue});"
+		],
+		"description": "Create a reactive signal"
+	},
+	"Template Property": {
+		"prefix": "template",
+		"body": [
+			"var template = `",
+			"\t$0",
+			"`;"
+		],
+		"description": "Define the component template"
+	},
+	"Scoped Style": {
+		"prefix": "style",
+		"body": [
+			"<style scoped>",
+			"\t$0",
+			"</style>"
+		],
+		"description": "Add scoped CSS styles"
+	},
+	"Console Log": {
+		"prefix": "log",
+		"body": [
+			"console.log($1);"
+		],
+		"description": "Log to console"
+	},
+	"Template Loop": {
+		"prefix": "loop",
+		"body": [
+			"\\${${1:list}.map(${2:item} => `",
+			"\t$0",
+			"`).join('')}"
+		],
+		"description": "Render a list in the template"
+	},
+	"If/Else Statement": {
+		"prefix": "ifelse",
+		"body": [
+			"if (${1:condition}) {",
+			"\t$2",
+			"} else {",
+			"\t$0",
+			"}"
+		],
+		"description": "If/Else block"
+	},
+	"Try/Catch Block": {
+		"prefix": "trycatch",
+		"body": [
+			"try {",
+			"\t$1",
+			"} catch (${2:error}) {",
+			"\t$0",
+			"}"
+		],
+		"description": "Try/Catch block"
+	},
+	"Async Function": {
+		"prefix": "async",
+		"body": [
+			"async function ${1:name}(${2:params}) {",
+			"\t$0",
+			"}"
+		],
+		"description": "Async function definition"
+	},
+	"Switch Statement": {
+		"prefix": "switch",
+		"body": [
+			"switch (${1:key}) {",
+			"\tcase ${2:value}:",
+			"\t\t$0",
+			"\t\tbreak;",
+			"\tdefault:",
+			"\t\tbreak;",
+			"}"
+		],
+		"description": "Switch statement"
+	},
+	"While Loop": {
+		"prefix": "while",
+		"body": [
+			"while (${1:condition}) {",
+			"\t$0",
+			"}"
+		],
+		"description": "While loop"
+	},
+	"For Loop": {
+		"prefix": "for",
+		"body": [
+			"for (let ${1:i} = 0; $1 < ${2:array}.length; $1++) {",
+			"\tconst ${3:element} = $2[$1];",
+			"\t$0",
+			"}"
+		],
+		"description": "For loop"
+	},
+	"Class Definition": {
+		"prefix": "class",
+		"body": [
+			"class ${1:Name} {",
+			"\tconstructor(${2:params}) {",
+			"\t\t$0",
+			"\t}",
+			"}"
+		],
+		"description": "Class definition"
+	},
+	"Import Statement": {
+		"prefix": "import",
+		"body": [
+			"import { ${1:module} } from '${2:path}';"
+		],
+		"description": "Import statement"
+	},
+	"Export Statement": {
+		"prefix": "export",
+		"body": [
+			"export const ${1:name} = ${2:value};"
+		],
+		"description": "Export statement"
+	},
+	"Return Statement": {
+		"prefix": "return",
+		"body": [
+			"return $0;"
+		],
+		"description": "Return statement"
+	},
+	"Throw Statement": {
+		"prefix": "throw",
+		"body": [
+			"throw new Error('${1:message}');"
+		],
+		"description": "Throw an error"
+	},
+	"Debugger Statement": {
+		"prefix": "debugger",
+		"body": [
+			"debugger;"
+		],
+		"description": "Debugger statement"
+	},
+	"SetTimeout Function": {
+		"prefix": "setTimeout",
+		"body": [
+			"setTimeout(() => {",
+			"\t$0",
+			"}, ${1:1000});"
+		],
+		"description": "SetTimeout function"
+	},
+	"SetInterval Function": {
+		"prefix": "setInterval",
+		"body": [
+			"setInterval(() => {",
+			"\t$0",
+			"}, ${1:1000});"
+		],
+		"description": "SetInterval function"
+	},
+	"JSON Stringify": {
+		"prefix": "json",
+		"body": [
+			"JSON.stringify(${1:value}, null, 2);"
+		],
+		"description": "JSON stringify with formatting"
+	},
+	"JSON Parse": {
+		"prefix": "jsonparse",
+		"body": [
+			"JSON.parse(${1:value});"
+		],
+		"description": "JSON parse"
+	},
+	"Get Element By ID": {
+		"prefix": "getid",
+		"body": [
+			"document.getElementById('${1:id}');"
+		],
+		"description": "Get element by ID"
+	},
+	"Query Selector": {
+		"prefix": "query",
+		"body": [
+			"document.querySelector('${1:selector}');"
+		],
+		"description": "Query selector"
+	},
+	"Query Selector All": {
+		"prefix": "queryall",
+		"body": [
+			"document.querySelectorAll('${1:selector}');"
+		],
+		"description": "Query selector all"
+	},
+	"Add Event Listener": {
+		"prefix": "addevent",
+		"body": [
+			"${1:element}.addEventListener('${2:event}', (${3:e}) => {",
+			"\t$0",
+			"});"
+		],
+		"description": "Add event listener"
+	},
+	"Remove Event Listener": {
+		"prefix": "removeevent",
+		"body": [
+			"${1:element}.removeEventListener('${2:event}', ${3:handler});"
+		],
+		"description": "Remove event listener"
+	},
+	"Fetch API": {
+		"prefix": "fetch",
+		"body": [
+			"fetch('${1:url}')",
+			"\t.then(response => response.json())",
+			"\t.then(data => {",
+			"\t\t$0",
+			"\t})",
+			"\t.catch(error => console.error('Error:', error));"
+		],
+		"description": "Fetch API request"
+	},
+	"Local Storage Set": {
+		"prefix": "localset",
+		"body": [
+			"localStorage.setItem('${1:key}', ${2:value});"
+		],
+		"description": "Set item in localStorage"
+	},
+	"Local Storage Get": {
+		"prefix": "localget",
+		"body": [
+			"localStorage.getItem('${1:key}');"
+		],
+		"description": "Get item from localStorage"
+	},
+	"Session Storage Set": {
+		"prefix": "sessionset",
+		"body": [
+			"sessionStorage.setItem('${1:key}', ${2:value});"
+		],
+		"description": "Set item in sessionStorage"
+	},
+	"Session Storage Get": {
+		"prefix": "sessionget",
+		"body": [
+			"sessionStorage.getItem('${1:key}');"
+		],
+		"description": "Get item from sessionStorage"
+	},
+	"Console Error": {
+		"prefix": "error",
+		"body": [
+			"console.error($1);"
+		],
+		"description": "Log error to console"
+	},
+	"Console Warn": {
+		"prefix": "warn",
+		"body": [
+			"console.warn($1);"
+		],
+		"description": "Log warning to console"
+	},
+	"Console Info": {
+		"prefix": "info",
+		"body": [
+			"console.info($1);"
+		],
+		"description": "Log info to console"
+	},
+	"Console Table": {
+		"prefix": "table",
+		"body": [
+			"console.table($1);"
+		],
+		"description": "Log table to console"
+	},
+	"Console Group": {
+		"prefix": "group",
+		"body": [
+			"console.group('${1:label}');",
+			"$0",
+			"console.groupEnd();"
+		],
+		"description": "Group console logs"
+	},
+	"Console Time": {
+		"prefix": "time",
+		"body": [
+			"console.time('${1:label}');"
+		],
+		"description": "Start a timer"
+	},
+	"Console Time End": {
+		"prefix": "timeEnd",
+		"body": [
+			"console.timeEnd('${1:label}');"
+		],
+		"description": "End a timer"
+	},
+	"Console Clear": {
+		"prefix": "clear",
+		"body": [
+			"console.clear();"
+		],
+		"description": "Clear console"
+	}
+}

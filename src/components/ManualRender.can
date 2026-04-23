@@ -1,0 +1,57 @@
+import { h, Fragment, signal, watchEffect, queueJob } from '../runtime-helpers';
+
+component ManualRender {
+    var nodeCount = signal(5);
+
+    // The "manualRender" method bypasses the template compiler.
+    // It allows direct usage of the Virtual DOM API (h functions).
+    manualRender() {
+        // Programmatically generate children
+        var nodes = [];
+        for (let i = 0; i < this.nodeCount.value; i++) {
+            var hue = (i * 40) % 360;
+            nodes.push(h('div', { 
+                class: 'v-node',
+                style: `border-left: 4px solid hsl(${hue}, 70%, 50%)`
+            }, [
+                h('span', { class: 'node-id' }, `Node #${i + 1}`),
+                h('span', { class: 'node-type' }, 'VirtualElement')
+            ]));
+        }
+
+        return h('div', { class: 'render-engine' }, [
+            h('header', {}, [
+                h('h3', {}, 'Direct Render Engine'),
+                h('p', { class: 'meta' }, `Bypassing template compiler • ${this.nodeCount.value} Active Nodes`)
+            ]),
+            h('div', { class: 'controls' }, [
+                h('button', { onclick: () => this.nodeCount.value++ }, 'Add Node'),
+                h('button', { onclick: () => this.nodeCount.value = Math.max(0, this.nodeCount.value - 1) }, 'Remove'),
+                h('button', { class: 'stress-btn', onclick: () => this.stressTest() }, 'Stress Test (500)')
+            ]),
+            h('div', { class: 'canvas' }, nodes)
+        ]);
+    }
+    
+    function stressTest() {
+        // queueJob schedules the update for the next microtask,
+        // allowing the UI to remain responsive during event handling.
+        queueJob(() => {
+            this.nodeCount.value = 500;
+        });
+    }
+}
+
+<style scoped>
+.render-engine { background: #222; color: #eee; padding: 20px; border-radius: 8px; font-family: monospace; max-width: 500px; }
+.meta { color: #888; font-size: 0.8rem; margin-top: 5px; }
+.controls { display: flex; gap: 10px; margin: 20px 0; }
+button { background: #333; color: white; border: 1px solid #444; padding: 8px 16px; cursor: pointer; border-radius: 4px; }
+button:hover { background: #444; }
+.stress-btn { color: #ff6b6b; border-color: #ff6b6b; }
+.canvas { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; max-height: 300px; overflow-y: auto; padding: 10px; background: #1a1a1a; border-radius: 4px; }
+.v-node { background: #2a2a2a; padding: 10px; border-radius: 4px; display: flex; flex-direction: column; gap: 5px; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.node-id { font-weight: bold; font-size: 0.9rem; }
+.node-type { font-size: 0.7rem; color: #666; }
+@keyframes popIn { from { transform: scale(0.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+</style>

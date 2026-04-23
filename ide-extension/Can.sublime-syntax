@@ -1,0 +1,32 @@
+%YAML 1.2
+---
+name: Can
+file_extensions:
+  - can
+scope: source.can
+contexts:
+  main:
+    - match: \b(component|function|var|if|else|return|class)\b
+      scope: keyword.control.can
+    - match: '"'
+      push: string
+    - match: '`'
+      push: template
+
+  string:
+    - meta_scope: string.quoted.double.can
+    - match: '"'
+      pop: true
+
+  template:
+    - meta_scope: string.quoted.template.can
+    - match: '`'
+      pop: true
+    - match: '\{\{'
+      push: mustache
+    - include: scope:text.html.basic
+
+  mustache:
+    - meta_scope: variable.language.mustache.can
+    - match: '\}\}'
+      pop: true

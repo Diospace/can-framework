@@ -1,0 +1,43 @@
+import { signal, useTween, useScroll, useIntersectionObserver, cRef } from '../runtime-helpers';
+
+component ScrollAnimation {
+    var targetY = signal(0);
+    // Smoothly interpolate to targetY
+    var animatedY = useTween(this.targetY, { duration: 800 });
+    
+    // Track window scroll
+    var { y: scrollY } = useScroll();
+
+    // Track element visibility
+    var boxRef = signal(null);
+    var { isIntersecting } = useIntersectionObserver(this.boxRef);
+
+    function toggleTween() {
+        this.targetY.value = this.targetY.value === 0 ? 100 : 0;
+    }
+
+    function scrollToTop() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    var template = `
+        <div style="height: 150vh; padding: 20px; border: 1px solid #ccc;">
+            <h3>Scroll & Tween</h3>
+            <div style="position: fixed; top: 100px; right: 10px; background: white; padding: 10px; border: 1px solid black;">
+                Scroll Y: {{scrollY}}
+                <button @click="scrollToTop">Top</button>
+            </div>
+
+            <button @click="toggleTween">Animate Box</button>
+            <div style="transform: translateY({{animatedY}}px); width: 50px; height: 50px; background: orange; margin-bottom: 50px;">
+                Tween
+            </div>
+
+            <div style="margin-top: 110vh; padding: 20px; background: #eee;" c-ref="boxRef">
+                <p c-if="isIntersecting" style="color: green; font-weight: bold;">I am visible!</p>
+                <p c-else>I am hidden...</p>
+                Scroll down to see me.
+            </div>
+        </div>
+    `;
+}

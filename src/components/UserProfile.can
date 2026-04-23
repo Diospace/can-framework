@@ -1,0 +1,49 @@
+import { useAsyncState } from '../runtime-helpers';
+
+component UserProfile {
+    // Mock API call
+    async function fetchUser() {
+        await new Promise(r => setTimeout(r, 1500));
+        return { 
+            name: 'Alex Developer', 
+            role: 'Senior Engineer', 
+            avatar: 'https://i.pravatar.cc/150?u=alex',
+            status: 'Online'
+        };
+    }
+
+    var { state: user, isLoading, execute } = useAsyncState(this.fetchUser(), null);
+
+    var template = `
+        <div class="user-card">
+            <div c-if="isLoading" class="loading-state">
+                <div class="spinner"></div>
+                <p>Fetching Profile...</p>
+            </div>
+            
+            <div c-else class="profile-content">
+                <div class="avatar-wrapper">
+                    <img src="{{user.value?.avatar}}" class="avatar" />
+                    <span class="status-dot"></span>
+                </div>
+                <h3>{{user.value?.name}}</h3>
+                <span class="role">{{user.value?.role}}</span>
+                <button class="refresh-btn" onclick="() => this.execute()">Refresh Data</button>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.user-card { width: 250px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 25px; text-align: center; font-family: 'Segoe UI', sans-serif; }
+.loading-state { color: #999; padding: 40px 0; }
+.spinner { width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; margin: 0 auto 15px; animation: spin 1s linear infinite; }
+.avatar-wrapper { position: relative; display: inline-block; margin-bottom: 15px; }
+.avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #f0f2f5; }
+.status-dot { width: 12px; height: 12px; background: #2ecc71; border: 2px solid white; border-radius: 50%; position: absolute; bottom: 5px; right: 5px; }
+h3 { margin: 0 0 5px; color: #333; }
+.role { display: block; color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px; }
+.refresh-btn { background: #ecf0f1; color: #2c3e50; border: none; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+.refresh-btn:hover { background: #dfe6e9; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+</style>

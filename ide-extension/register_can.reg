@@ -1,0 +1,16 @@
+Windows Registry Editor Version 5.00
+
+[HKEY_CLASSES_ROOT\.can]
+@="Can.File"
+"PerceivedType"="text"
+"Content Type"="text/plain"
+
+[HKEY_CLASSES_ROOT\Can.File]
+@="Can Framework Component"
+
+[HKEY_CLASSES_ROOT\Can.File\DefaultIcon]
+; Ensure you have generated a .ico file at this location
+@="C:\\Users\\HP\\Documents\\software\\framework\\ide-extension\\icons\\can.ico"
+
+[HKEY_CLASSES_ROOT\Can.File\shell\open\command]
+@="\"C:\\Users\\HP\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe\" \"%1\""

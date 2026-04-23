@@ -1,0 +1,92 @@
+import { signal, useIdle, useFullscreen, useShare, cRef } from '../runtime-helpers';
+
+component AppFeatures {
+    // 1. Idle Detection
+    var { idle, lastActive } = useIdle(3000);
+
+    // 2. Fullscreen
+    var screenRef = signal(null);
+    var { isFullscreen, toggle } = useFullscreen(this.screenRef);
+
+    // 3. Share
+    var { share, isSupported } = useShare();
+
+    function handleShare() {
+        this.share({
+            title: 'Can Framework',
+            text: 'Building the future of web apps.',
+            url: window.location.href
+        });
+    }
+
+    var template = `
+        <div class="features-panel">
+            <header>
+                <h2>System Capabilities</h2>
+                <div class="status-badge {{idle.value ? 'idle' : 'active'}}">
+                    {{idle.value ? 'User Idle' : 'User Active'}}
+                </div>
+            </header>
+
+            <div class="grid">
+                <!-- Idle Monitor -->
+                <div class="card">
+                    <h3>Activity Monitor</h3>
+                    <p>Last Active: {{new Date(lastActive.value).toLocaleTimeString()}}</p>
+                    <div class="activity-graph">
+                        <div class="bar {{idle.value ? 'low' : 'high'}}"></div>
+                    </div>
+                </div>
+
+                <!-- Fullscreen -->
+                <div class="card media-card" c-ref="screenRef">
+                    <h3>Display Control</h3>
+                    <div class="screen-content">
+                        <p>{{isFullscreen.value ? 'Immersive Mode' : 'Windowed Mode'}}</p>
+                        <button class="action-btn" onclick="() => this.toggle()">
+                            {{isFullscreen.value ? 'Exit Fullscreen' : 'Enter Fullscreen'}}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Share -->
+                <div class="card">
+                    <h3>Social Integration</h3>
+                    <p>{{isSupported ? 'Native Sharing Available' : 'Sharing Not Supported'}}</p>
+                    <button class="share-btn" disabled="{{!isSupported}}" onclick="() => this.handleShare()">
+                        Share Application
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.features-panel { padding: 2rem; background: #f4f6f8; border-radius: 12px; font-family: system-ui, sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+h2 { margin: 0; color: #2c3e50; }
+.status-badge { padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
+.active { background: #e3fcef; color: #2e7d32; }
+.idle { background: #fff3cd; color: #ff8f00; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; }
+.card { background: white; padding: 1.5rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s; }
+.card:hover { transform: translateY(-2px); }
+.card h3 { margin-top: 0; color: #555; font-size: 1.1rem; }
+
+.media-card { background: #2c3e50; color: white; }
+.media-card h3 { color: #ecf0f1; }
+.screen-content { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px 0; }
+
+.action-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+.action-btn:hover { background: rgba(255,255,255,0.3); }
+
+.share-btn { width: 100%; padding: 10px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.share-btn:disabled { background: #bdc3c7; cursor: not-allowed; }
+
+.activity-graph { height: 4px; background: #eee; margin-top: 10px; border-radius: 2px; overflow: hidden; }
+.bar { height: 100%; transition: width 0.3s, background 0.3s; width: 100%; }
+.high { background: #2ecc71; }
+.low { background: #f1c40f; width: 20%; }
+</style>
