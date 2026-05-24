@@ -12,6 +12,12 @@ const __dirname = path.dirname(__filename);
 console.log('\x1b[34m%s\x1b[0m', '>>> Starting Framework Build...');
 
 try {
+    const distPath = path.resolve(__dirname, '../dist');
+    if (fs.existsSync(distPath)) {
+        console.log('\x1b[36m%s\x1b[0m', '>>> Cleaning old build artifacts...');
+        fs.rmSync(distPath, { recursive: true, force: true });
+    }
+
     // 1. Ensure the CLI is compiled before attempting to run it or type-check.
     const cliEntry = path.resolve(__dirname, '../dist/index.mjs');
     if (!fs.existsSync(cliEntry)) {

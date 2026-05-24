@@ -160,7 +160,12 @@ export async function build(specificFile?: string) {
     // Feature: clear-dist flag
     if (process.argv.includes('--clear') && fs.existsSync(distDir)) {
         console.log('Clearing dist directory...');
-        fs.rmSync(distDir, { recursive: true, force: true });
+        // Preserve the CLI bundle so the build tool doesn't delete itself
+        const items = fs.readdirSync(distDir);
+        for (const item of items) {
+            if (item === 'index.mjs' || item === 'cli') continue;
+            fs.rmSync(path.join(distDir, item), { recursive: true, force: true });
+        }
     }
 
     if (!fs.existsSync(distDir)) {
