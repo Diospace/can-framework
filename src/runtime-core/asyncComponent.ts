@@ -53,7 +53,7 @@ export function defineAsyncComponent(loader: () => Promise<any>): any {
                     
                     // Execute lifecycle and render
                     if ((instance as any).onBeforeMount) (instance as any).onBeforeMount();
-                    container.appendChild(instance.render());
+                    container.appendChild(instance);
                 } else {
                     container.innerHTML = '<div>Loading...</div>';
                 }

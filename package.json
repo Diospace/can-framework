@@ -8,6 +8,7 @@
   "icon": "ide-extension/icons/can.png",
   "repository": {
     "type": "git",
+  
     "url": "git+https://github.com/Diospace/can-framework.git"
   },
   "homepage": "https://github.com/can-framework/can-language-support#readme",
@@ -29,17 +30,18 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "can": "node ./dist/cli/index.mjs",
+    "can": "node ./dist/index.mjs",
     "build": "node scripts/build.js",
     "dev": "node scripts/dev.js",
     "prepublishOnly": "npm run build",
     "postinstall": "npm run build && npm link",
     "type-check": "tsc --noEmit",
-    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/cli/index.mjs --external:esbuild",
+    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild",
+    "compile:all": "esbuild src/**/*.ts --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs",
     "api": "ts-node src/cli/build.ts api/index.ts api/routes.ts && node dist/api/index.mjs",
     "api:dev": "ts-node api/index.ts",
     "build:bundle": "webpack",
-    "build:cdn": "webpack --config webpack.config.cdn.cjs",
+    "build:cdn": "webpack --config webpack.config.cdn2.cjs",
     "build:cdn:modern": "node scripts/cdn/build-cdn.js",
     "build:cdn:all": "npm run build:cdn && npm run build:cdn:modern",
     "test": "vitest",

@@ -132,8 +132,7 @@ function handleElement(el: HTMLElement, scope: any): boolean {
             set(target, key, value, receiver) {
                 if (Reflect.has(target, key)) return Reflect.set(target, key, value, receiver);
                 if (state && Reflect.has(state, key)) {
-                    state[key as string] = value;
-                    return true;
+                    return Reflect.set(state, key, value);
                 }
                 return Reflect.set(target, key, value, receiver);
             },
@@ -611,7 +610,8 @@ export function createApp(options: {
                 ...props,
                 ...(options.data ? options.data.call(instance) : {}), 
                 ...(options.setup ? options.setup(props) : {}),
-                $store: options.store // Make store accessible via $store
+                $store: options.store, // Make store accessible via $store
+               
             };
 
             // Set active instance so reactive() and other setup logic can see it
@@ -630,8 +630,7 @@ export function createApp(options: {
                 set(target, key, value, receiver) {
                     if (Reflect.has(target, key)) return Reflect.set(target, key, value, receiver);
                     if (Reflect.has(state, key)) {
-                        state[key as string] = value;
-                        return true;
+                        return Reflect.set(state, key, value);
                     }
                     return Reflect.set(target, key, value, receiver);
                 },

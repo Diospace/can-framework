@@ -51,6 +51,15 @@ async function run() {
             const { create } = await import('./create');
             create(args[1]);
             break;
+        case 'ssg':
+            const { ssg } = await import('./ssg');
+            await ssg(args[1]);
+            break;
+        case 'serve':
+            const { serve } = await import('./serve');
+            const port = args[1] ? parseInt(args[1]) : 3000;
+            await serve(port);
+            break;
         default:
             console.log('\n\x1b[32mCan Framework CLI\x1b[0m');
             console.log('Usage: can <command> [arguments]\n');
@@ -58,6 +67,8 @@ async function run() {
             console.log('  \x1b[36mcreate <name>\x1b[0m  Scaffold a new Can project');
             console.log('  \x1b[36mbuild\x1b[0m          Build for production');
             console.log('  \x1b[36mdev\x1b[0m            Start dev server with HMR\n');
+            console.log('  \x1b[36mssg\x1b[0m            Generate static HTML files');
+            console.log('  \x1b[36mserve [port]\x1b[0m   Start production preview server (default: 3000)\n');
     }
 }
 

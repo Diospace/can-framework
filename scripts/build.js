@@ -13,9 +13,9 @@ console.log('\x1b[34m%s\x1b[0m', '>>> Starting Framework Build...');
 
 try {
     // 1. Ensure the CLI is compiled before attempting to run it or type-check.
-    const cliEntry = path.resolve(__dirname, '../dist/cli/index.mjs');
+    const cliEntry = path.resolve(__dirname, '../dist/index.mjs');
     if (!fs.existsSync(cliEntry)) {
-        console.log('\x1b[33m%s\x1b[0m', '>>> dist/cli/index.mjs not found. Bootstrapping CLI tool...');
+        console.log('\x1b[33m%s\x1b[0m', '>>> dist/index.mjs not found. Bootstrapping CLI tool...');
         execSync('npm run compile', { stdio: 'inherit' });
     }
 
@@ -32,7 +32,7 @@ try {
     const webpackMode = isProd ? 'production' : 'development';
 
     // Run the framework build with optional minification
-    execSync(`node dist/cli/index.mjs build --clear ${minifyFlag}`, { stdio: 'inherit' });
+    execSync(`node dist/index.mjs build --clear ${minifyFlag}`, { stdio: 'inherit' });
 
     console.log('\x1b[36m%s\x1b[0m', '>>> Bundling CDN Runtime Compiler (Output: dist/cdn)...');
     // Execute webpack with the appropriate mode

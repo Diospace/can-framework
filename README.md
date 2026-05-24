@@ -69,4 +69,4 @@ Endurance focuses on compiler-driven architectures and fine-grained reactivity t
 - **Project**: Can Framework
 
 
- "compile": "ts-node src/cli/build.ts",
+ #"compile": "ts-node src/cli/build.ts"

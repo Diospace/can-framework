@@ -1,9 +1,18 @@
-const esbuild = require('esbuild');
-const fs = require('fs');
-const path = require('path');
+// const esbuild = require('esbuild');
+// const fs = require('fs');
+// const path = require('path');
 
-const entryPoint = path.join(__dirname, 'cdn.ts');
-const outDir = path.join(__dirname, '../../dist/cdn');
+//import * from 'esbuild';
+import {build as esBuild, transformSync } from 'esbuild';
+import * as fs from 'fs';
+import * as path from 'path';
+
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+ const entryPoint = path.join(__dirname, 'cdn.ts');
+ const outDir = path.join(__dirname, '../../build/cdn');
 
 async function build() {
     console.log('📦 Bundling for CDN...');
@@ -11,7 +20,7 @@ async function build() {
     try {
         // 1. Global Bundle (IIFE) - for <script src="...">
         // This creates a global variable 'Can' containing all your exports
-        await esbuild.build({
+        await esBuild({
             entryPoints: [entryPoint],
             bundle: true,
             outfile: path.join(outDir, 'can.global.min.js'),
@@ -23,7 +32,7 @@ async function build() {
         console.log(`  ✅ ${path.relative(process.cwd(), outDir)}/can.global.min.js (window.Can)`);
 
         // 2. ESM Bundle - for <script type="module">
-        await esbuild.build({
+        await esBuild({
             entryPoints: [entryPoint],
             bundle: true,
             outfile: path.join(outDir, 'can.esm.js'),
@@ -47,6 +56,7 @@ async function build() {
  */
 function reportSizes() {
     const files = [
+        'can.prod.min.js',
         'can.compat.min.js',
         'can.global.min.js',
         'can.esm.js'
@@ -66,6 +76,14 @@ function reportSizes() {
             const label = file.padEnd(20);
             
             console.log(`${label} │ ${color}${sizeKB} KB\x1b[0m`);
+       
+        // Color coding: [prod] is usually larger (yellow), Modern is smaller (green)
+            const colorProd = file.includes('prod') ? '\x1b[33m' : '\x1b[32m';
+            const labelProd = file.padEnd(20);
+            
+            console.log(`${labelProd} │ ${colorProd}${sizeKB} KB\x1b[0m`);
+       
+       
         }
     });
     console.log('-------------------------------------------');
