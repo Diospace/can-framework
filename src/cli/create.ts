@@ -27,10 +27,11 @@ export function create(projectName: string) {
         scripts: {
             "dev": "can dev",
             "build": "can build",
-            "serve": "can serve"
+            "serve": "can serve",
+            "ssg": "can ssg"
         },
         "dependencies": {
-            "can-framework": "^0.0.1"
+            "@decaspace/can-framework": "^1.0.0"
         },
         "devDependencies": {
             "typescript": "^5.7.2",
@@ -112,7 +113,7 @@ component App {
 
     // Create main.ts (The entry point logic)
     const mainTs = `
-import { createApp } from 'can-framework';
+import { createApp } from '@decaspace/can-framework';
 import { App } from './App.can';
 
 const app = createApp(App);
@@ -128,7 +129,7 @@ declare module "*.can" {
 }
     `;
 
-    const htmtMainPage=`
+    const htmlMainPage=`
     <!DOCTYPE html>
       <html lang="en">
         <head>
@@ -149,7 +150,7 @@ declare module "*.can" {
     fs.writeFileSync(path.join(root, 'src', 'App.can'), appCan.trim());
     fs.writeFileSync(path.join(root, 'src', 'main.ts'), mainTs.trim());
     fs.writeFileSync(path.join(root, 'src', 'env.d.ts'), envDtTs.trim());
-    fs.writeFileSync(path.join(root, 'public', 'index.html'), htmtMainPage.trim());
+    fs.writeFileSync(path.join(root, 'public', 'index.html'), htmlMainPage.trim());
 
     console.log('Project created successfully!');
     console.log(`\ncd ${projectName}\nnpm install\nnpm run dev`);

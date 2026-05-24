@@ -1,5 +1,5 @@
 {
-  "name": "can-framework",
+  "name": "@decaspace/can-framework",
   "displayName": "Can Framework",
   "description": "A modern, high-performance web framework using Signal-based reactivity and Single File Components.",
   "publisher": "can-framework",
@@ -14,7 +14,7 @@
   "homepage": "https://github.com/can-framework/can-language-support#readme",
   "bugs": "https://github.com/can-framework/can-language-support/issues",
   "bin": {
-    "can": "./dist/cli/index.mjs"
+    "can": "./dist/index.mjs"
   },
   "main": "./dist/runtime-core/index.mjs",
   "module": "./dist/runtime-core/index.mjs",

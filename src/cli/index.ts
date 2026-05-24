@@ -61,8 +61,8 @@ async function run() {
             await serve(port);
             break;
         default:
-            console.log('\n\x1b[32mCan Framework CLI\x1b[0m');
-            console.log('Usage: can <command> [arguments]\n');
+            console.log('\n\x1b[32m@decaspace/can-framework CLI\x1b[0m');
+            console.log('Usage: npx @decaspace/can-framework <command> [arguments]\n');
             console.log('Commands:');
             console.log('  \x1b[36mcreate <name>\x1b[0m  Scaffold a new Can project');
             console.log('  \x1b[36mbuild\x1b[0m          Build for production');
