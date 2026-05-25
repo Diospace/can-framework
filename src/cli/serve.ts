@@ -3,15 +3,23 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { build } from './build';
 
-export async function serve(port: number = 3000) {
-    // Initial build
-    await build();
+export async function serve(port: number = 3000, isProd: boolean = false) {
+    const distDir = path.join(process.cwd(), 'dist');
+
+    // Only build if in dev mode OR if the production dist directory is missing
+    if (!isProd || !fs.existsSync(distDir)) {
+        if (isProd) {
+            console.log('\x1b[33m[Can Preview]\x1b[0m dist directory not found. Performing production build...');
+        }
+        // In production mode, we pass 'true' to ensure the build is minified
+        await build(undefined, isProd);
+    }
 
     const clients: http.ServerResponse[] = [];
 
     const server = http.createServer((req, res) => {
-        // 1. Handle HMR / Live Reload connection
-        if (req.url === '/_hmr') {
+        // 1. Handle HMR / Live Reload connection (Disabled in production)
+        if (!isProd && req.url === '/_hmr') {
             res.writeHead(200, {
                 'Content-Type': 'text/event-stream',
                 'Cache-Control': 'no-cache',
@@ -28,7 +36,6 @@ export async function serve(port: number = 3000) {
         }
 
         // 2. Serve Static Files from the build output directory (dist)
-        const distDir = path.join(process.cwd(), 'dist');
         const urlPath = req.url === '/' ? '/index.html' : req.url!;
         const filePath = path.join(distDir, urlPath);
 
@@ -56,8 +63,8 @@ export async function serve(port: number = 3000) {
                     res.end('Server Error: '+error.code);
                 }
             } else {
-                // Inject HMR script into HTML
-                if (contentType === 'text/html') {
+                // Inject Dev/HMR scripts into HTML (Only if NOT production)
+                if (contentType === 'text/html' && !isProd) {
                     // Read mock devtools script
                     let mockScript = '';
                     try {
@@ -117,10 +124,16 @@ export async function serve(port: number = 3000) {
     });
 
     server.listen(port, () => {
-        console.log(`Dev server running at http://localhost:${port}`);
+        if (isProd) {
+            console.log(`Production preview server running at http://localhost:${port}`);
+        } else {
+            console.log(`Dev server running at http://localhost:${port}`);
+        }
     });
 
-    // 3. Watch for changes
+    // 3. Watch for changes (Only if NOT production)
+    if (isProd) return;
+
     let timeout: NodeJS.Timeout;
     const cwd = process.cwd();
     const dirsToWatch = [path.join(cwd, 'src'), path.join(cwd, 'examples')];

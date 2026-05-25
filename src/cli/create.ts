@@ -28,7 +28,9 @@ export function create(projectName: string) {
             "dev": "can dev",
             "build": "can build",
             "serve": "can serve",
-            "ssg": "can ssg"
+            "ssg": "can ssg",
+            "disk": "can disk",
+            "preview": "can preview"
         },
         "dependencies": {
             "@decaspace/can-framework": "^1.0.0"

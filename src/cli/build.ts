@@ -62,10 +62,45 @@ function saveFile(content: string, sourcePath: string, inputRoot: string, output
     fs.writeFileSync(outPath, content);
 }
 
+interface BuildContext {
+    total: number;
+    current: number;
+    built: number;
+    skipped: number;
+}
+
+function countFiles(dir: string): number {
+    if (!fs.existsSync(dir)) return 0;
+    let count = 0;
+    const items = fs.readdirSync(dir);
+    for (const item of items) {
+        const fullPath = path.join(dir, item);
+        const stat = fs.statSync(fullPath);
+        if (stat.isDirectory()) {
+            count += countFiles(fullPath);
+        } else {
+            const ext = path.extname(item);
+            if ((ext === '.can' || ext === '.ts') && !item.endsWith('.d.ts')) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+function renderProgressBar(current: number, total: number, message: string) {
+    const width = 25;
+    const progress = total > 0 ? current / total : 1;
+    const filled = Math.round(width * progress);
+    const bar = '█'.repeat(filled) + '░'.repeat(width - filled);
+    const percent = Math.round(progress * 100);
+    process.stdout.write(`\r\x1b[36m[Can Build]\x1b[0m [${bar}] ${percent}% | ${message.padEnd(30).slice(0, 30)}`);
+}
+
 /**
  * Processes a single file. Useful for optimized watch cycles.
  */
-async function buildFile(fullPath: string, inputRoot: string, outputRoot: string) {
+async function buildFile(fullPath: string, inputRoot: string, outputRoot: string, minify: boolean = false) {
     const file = path.basename(fullPath);
     const ext = path.extname(file);
     const stat = fs.statSync(fullPath);
@@ -81,21 +116,22 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         return false; 
     }
 
+    // Check for minification flag (CLI argument or programmatic override)
+    const shouldMinify = minify || process.argv.includes('--minify');
+
     if (ext === '.can') {
-        console.log(`Building: ${file}`);
         const content = fs.readFileSync(fullPath, 'utf-8');
         const { code } = await transpile(content, defaultPlugins, fullPath);
         let processedCode = fixImports(code, fullPath);
 
         // Minification logic using esbuild
-        if (process.argv.includes('--minify')) {
+        if (shouldMinify) {
             const minified = transformSync(processedCode, { minify: true, loader: 'js', target: 'es2020' });
             processedCode = minified.code;
         }
 
         saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');
     } else if (ext === '.ts' && !file.endsWith('.d.ts')) {
-        console.log(`Building: ${file}`);
         const content = fs.readFileSync(fullPath, 'utf-8');
 
         const transpiledOutput = ts.transpileModule(content, {
@@ -118,7 +154,7 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         let processedCode = fixImports(transpiledOutput.outputText, fullPath);
 
         // Minification logic using esbuild
-        if (process.argv.includes('--minify')) {
+        if (shouldMinify) {
             const minified = transformSync(processedCode, { minify: true, loader: 'js', target: 'es2020' });
             processedCode = minified.code;
         }
@@ -131,7 +167,7 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
 /**
  * Recursively process files in a directory
  */
-async function processDirectory(dir: string, inputRoot: string, outputRoot: string) {
+async function processDirectory(dir: string, inputRoot: string, outputRoot: string, minify: boolean, context: BuildContext) {
     if (!fs.existsSync(dir)) return;
 
     const files = fs.readdirSync(dir);
@@ -141,17 +177,23 @@ async function processDirectory(dir: string, inputRoot: string, outputRoot: stri
         const stat = fs.statSync(fullPath);
 
         if (stat.isDirectory()) {
-            await processDirectory(fullPath, inputRoot, outputRoot);
+            await processDirectory(fullPath, inputRoot, outputRoot, minify, context);
             continue;
         }
         
+        const ext = path.extname(file);
+        if ((ext !== '.can' && ext !== '.ts') || file.endsWith('.d.ts')) continue;
+
+        context.current++;
+        renderProgressBar(context.current, context.total, `Building ${file}`);
+        
         // Process the file using the unified buildFile function
-        await buildFile(fullPath, inputRoot, outputRoot);
+        const built = await buildFile(fullPath, inputRoot, outputRoot, minify);
+        if (built) context.built++; else context.skipped++;
     }
 }
 
-export async function build(specificFile?: string) {
-    console.log('Compiling Can project...');
+export async function build(specificFile?: string, minify: boolean = false) {
     const cwd = process.cwd();
     const srcDir = path.join(cwd, 'src');
     const examplesDir = path.join(cwd, 'examples');
@@ -172,19 +214,35 @@ export async function build(specificFile?: string) {
         fs.mkdirSync(distDir, { recursive: true });
     }
 
+    const context: BuildContext = {
+        total: specificFile ? 1 : (countFiles(srcDir) + countFiles(examplesDir)),
+        current: 0,
+        built: 0,
+        skipped: 0
+    };
+
+    console.log(`Compiling Can project${context.total > 0 ? ` (${context.total} files)` : ''}...`);
+
     if (specificFile) {
         const fullPath = path.resolve(cwd, specificFile);
+        context.current++;
+        renderProgressBar(context.current, context.total, `Building ${path.basename(fullPath)}`);
+        
+        let built = false;
         if (fullPath.startsWith(srcDir)) {
-            await buildFile(fullPath, srcDir, distDir);
+            built = await buildFile(fullPath, srcDir, distDir, minify);
         } else if (fullPath.startsWith(examplesDir)) {
-            await buildFile(fullPath, examplesDir, path.join(distDir, 'examples'));
+            built = await buildFile(fullPath, examplesDir, path.join(distDir, 'examples'), minify);
         }
+        if (built) context.built++; else context.skipped++;
+        process.stdout.write('\n');
         return;
     }
 
-    await processDirectory(srcDir, srcDir, distDir);
-    await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'));
-    console.log(`Build finished. Output generated in ${distDir}`);
+    await processDirectory(srcDir, srcDir, distDir, minify, context);
+    await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context);
+    process.stdout.write('\n');
+    console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} compiled, ${context.skipped} skipped.`);
 
     // Handle public/index.html injection for production
     const publicDir = path.join(cwd, 'public');

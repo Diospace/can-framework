@@ -60,15 +60,26 @@ async function run() {
             const port = args[1] ? parseInt(args[1]) : 3000;
             await serve(port);
             break;
+        case 'preview':
+            const { serve: serveProd } = await import('./serve');
+            const previewPort = args[1] ? parseInt(args[1]) : 3000;
+            await serveProd(previewPort, true);
+            break;
+        case 'disk':
+            const { disk } = await import('./disk');
+            await disk();
+            break;
         default:
             console.log('\n\x1b[32m@decaspace/can-framework CLI\x1b[0m');
             console.log('Usage: npx @decaspace/can-framework <command> [arguments]\n');
             console.log('Commands:');
             console.log('  \x1b[36mcreate <name>\x1b[0m  Scaffold a new Can project');
             console.log('  \x1b[36mbuild\x1b[0m          Build for production');
-            console.log('  \x1b[36mdev\x1b[0m            Start dev server with HMR\n');
+            console.log('  \x1b[36mdev\x1b[0m            Watch for changes and rebuild (development)');
+            console.log('  \x1b[36mserve [port]\x1b[0m   Start development server with HMR (default: 3000)\n');
             console.log('  \x1b[36mssg\x1b[0m            Generate static HTML files');
-            console.log('  \x1b[36mserve [port]\x1b[0m   Start production preview server (default: 3000)\n');
+            console.log('  \x1b[36mpreview [port]\x1b[0m Start production preview server (default: 3000)\n');
+            console.log('  \x1b[36mdisk\x1b[0m           Analyze project disk usage\n');
     }
 }
 

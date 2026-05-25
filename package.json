@@ -5,6 +5,7 @@
   "publisher": "can-framework",
   "version": "1.0.0",
   "type": "module",
+  "license": "MIT",
   "icon": "ide-extension/icons/can.png",
   "repository": {
     "type": "git",
