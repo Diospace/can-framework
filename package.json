@@ -11,8 +11,8 @@
     "type": "git",
     "url": "git+https://github.com/Diospace/can-framework.git"
   },
-  "homepage": "https://github.com/can-framework/can-language-support#readme",
-  "bugs": "https://github.com/can-framework/can-language-support/issues",
+  "homepage": "https://github.com/Diospace/can-framework#readme",
+  "bugs": "https://github.com/Diospace/can-framework/issues",
   "bin": {
     "can": "./dist/index.mjs"
   },
@@ -34,7 +34,7 @@
     "build": "node scripts/build.js",
     "dev": "node scripts/dev.js",
     "prepublishOnly": "npm run build",
-    "postinstall": "npm run build && npm link",
+    "postinstall": "npm run build",
     "type-check": "tsc --noEmit",
     "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild",
     "compile:all": "esbuild src/**/*.ts examples/**/*.ts --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs",
