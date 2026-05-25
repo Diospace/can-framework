@@ -9,7 +9,6 @@
   "icon": "ide-extension/icons/can.png",
   "repository": {
     "type": "git",
-  
     "url": "git+https://github.com/Diospace/can-framework.git"
   },
   "homepage": "https://github.com/can-framework/can-language-support#readme",
@@ -38,7 +37,7 @@
     "postinstall": "npm run build && npm link",
     "type-check": "tsc --noEmit",
     "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild",
-    "compile:all": "esbuild src/**/*.ts --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs",
+    "compile:all": "esbuild src/**/*.ts examples/**/*.ts --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs",
     "api": "ts-node src/cli/build.ts api/index.ts api/routes.ts && node dist/api/index.mjs",
     "api:dev": "ts-node api/index.ts",
     "build:bundle": "webpack",

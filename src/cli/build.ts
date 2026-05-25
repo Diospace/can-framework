@@ -259,7 +259,15 @@ export async function build(specificFile?: string, minify: boolean = false) {
     // Copy examples/index.html to dist/examples/index.html
     const exampleIndexHtml = path.join(examplesDir, 'index.html');
     if (fs.existsSync(exampleIndexHtml)) {
-        fs.copyFileSync(exampleIndexHtml, path.join(distDir, 'examples', 'index.html'));
+        let htmlContent = fs.readFileSync(exampleIndexHtml, 'utf-8');
+        const exampleOutDir = path.join(distDir, 'examples');
+        if (!fs.existsSync(exampleOutDir)) fs.mkdirSync(exampleOutDir, { recursive: true });
+        
+        // Ensure the example entry point (main.mjs or index.mjs) is injected
+        if (!htmlContent.includes('.mjs')) {
+            htmlContent = htmlContent.replace('</body>', '<script type="module" src="./main.mjs"></script></body>');
+        }
+        fs.writeFileSync(path.join(exampleOutDir, 'index.html'), htmlContent);
     }
 }
 
