@@ -55,15 +55,6 @@ export async function transpile(content: string, plugins: CompilerPlugin[] = [],
  
     script = transformScript(script);
 
-    // 
-    // script= transformLifecycleHooks(script)
-    // script= transformProvideInject(script)
-    // script=transformProvideInject(script)
-    // script= transformSlots(script)
-    // script=transformWatch(script)
-    // script=transformComputed(script)
-
-
 //     // 1. Fix class syntax (remove 'function' keyword and 'var/let/const' for properties)
 //    script = script.replace(/(^|\s)function\s+(\w+)/g, '$1$2'); // function onMount() -> onMount()
 //    script = script.replace(/(^|\s)(var|let|const)\s+(\w+)/g, '$1$3'); // var title = ... -> title = ...
@@ -247,16 +238,33 @@ export function transformScript(code: string): string {
     const printer = ts.createPrinter({ omitTrailingSemicolon: true });
     let output = '';
 
-    // 1. Transform print() -> console.log()
+    // 1. AST Transformer for logic adjustments
     const transformer: ts.TransformerFactory<ts.SourceFile> = (context) => {
         return (rootNode) => {
             function visit(node: ts.Node): ts.Node {
+                // Transform print() -> console.log()
                 if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'print') {
                     return ts.factory.updateCallExpression(
                         node,
+                        ts.factory.createPropertyAccessExpression(ts.factory.createIdentifier('console'), 'log'),
+                        node.typeArguments,
+                        node.arguments
+                    );
+                }
+
+                // Example: Transform onMount(() => {}) -> this.onMounted(() => {})
+                // This is safer than the regex version
+                const lifecycleMap: Record<string, string> = { 
+                    'onMount': 'onMounted', 
+                    'onCleanup': 'onCleanup' 
+                };
+
+                if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && lifecycleMap[node.expression.text]) {
+                    return ts.factory.updateCallExpression(
+                        node,
                         ts.factory.createPropertyAccessExpression(
-                            ts.factory.createIdentifier('console'),
-                            'log'
+                            ts.factory.createThis(),
+                            lifecycleMap[node.expression.text]
                         ),
                         node.typeArguments,
                         node.arguments

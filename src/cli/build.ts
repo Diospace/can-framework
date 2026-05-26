@@ -23,11 +23,8 @@ export function fixImports(code: string, fullPath: string): string {
     // 2. Handle dynamic imports: import('./y')
     fixed = fixed.replace(/import\((['"])(\..+?)(?:\.js|\.can|\.ts)?\1\)/g, "import($1$2.mjs$1)");
 
-    // Ensure we don't end up with .mjs.mjs
-    fixed = fixed.replace(/\.mjs\.mjs/g, '.mjs');
-
     // Fix relative imports from examples pointing to src (since src is flattened in dist)
-    if (fullPath.includes('examples')) {
+    if (fullPath.includes(path.sep + 'examples' + path.sep)) {
         fixed = fixed.replace(/from\s+(['"])\.\.\/(?:src\/)?([^/]+)\/([^/]+)\.mjs\1/g, "from $1../$3.mjs$1");
     }
     return fixed;

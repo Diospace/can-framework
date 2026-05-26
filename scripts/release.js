@@ -13,11 +13,21 @@ async function release() {
     console.log('\x1b[33m%s\x1b[0m', '>>> Preparing for release...');
 
     try {
+        // 0. Check authentication before starting
+        try {
+            const user = execSync('npm whoami', { stdio: 'pipe' }).toString().trim();
+            console.log(`\x1b[36mLogged in as: ${user}\x1b[0m`);
+        } catch (e) {
+            console.error('\x1b[31m%s\x1b[0m', 'Error: You are not logged into npm. Please run "npm login" first.');
+            process.exit(1);
+        }
+
         // 1. Check for uncommitted changes (Safety check) - Bypass with --force
         const isForce = process.argv.includes('--force');
         const status = execSync('git status --porcelain').toString();
         if (status && !isForce) {
             console.error('\x1b[31m%s\x1b[0m', 'Error: You have uncommitted changes. Please commit or stash them before releasing.');
+            console.log('\x1b[33mUncommitted files:\n\x1b[0m' + status);
             console.log('To bypass this check, run: npm run release -- --force');
             process.exit(1);
         }
