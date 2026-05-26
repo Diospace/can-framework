@@ -40,8 +40,10 @@ async function run() {
     // 3. Command Dispatcher: Execute the logic
     switch (command) {
         case 'build':
-            const { build } = await import('./build');
-            await build(args[1]);
+            const { build } = await import('./build.js');
+            const buildTarget = args.slice(1).find(arg => !arg.startsWith('-'));
+            const isMinify = args.includes('--minify');
+            await build(buildTarget, isMinify);
             break;
         case 'dev':
             const { dev } = await import('./dev');

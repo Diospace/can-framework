@@ -79,10 +79,7 @@ function countFiles(dir: string): number {
         if (stat.isDirectory()) {
             count += countFiles(fullPath);
         } else {
-            const ext = path.extname(item);
-            if ((ext === '.can' || ext === '.ts') && !item.endsWith('.d.ts')) {
-                count++;
-            }
+            count++;
         }
     }
     return count;
@@ -104,16 +101,22 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
     const file = path.basename(fullPath);
     const ext = path.extname(file);
     const stat = fs.statSync(fullPath);
+    
+    const isSource = (ext === '.can' || (ext === '.ts' && !file.endsWith('.d.ts')));
+    const outName = isSource ? path.basename(file, ext) + '.mjs' : file;
 
     // Calculate output path
     const relativePath = path.relative(inputRoot, path.dirname(fullPath));
     const outDir = path.join(outputRoot, relativePath);
-    const outName = path.basename(file, ext) + '.mjs';
     const outPath = path.join(outDir, outName);
 
     // Incremental check
     if (fs.existsSync(outPath) && stat.mtimeMs <= fs.statSync(outPath).mtimeMs) {
         return false; 
+    }
+
+    if (!fs.existsSync(outDir)) {
+        fs.mkdirSync(outDir, { recursive: true });
     }
 
     // Check for minification flag (CLI argument or programmatic override)
@@ -160,7 +163,11 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         }
 
         saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');
+    } else {
+        // Static asset (HTML, CSS, JSON, Images, etc.): Copy instead of compile
+        fs.copyFileSync(fullPath, outPath);
     }
+
     return true;
 }
 
@@ -181,14 +188,12 @@ async function processDirectory(dir: string, inputRoot: string, outputRoot: stri
             continue;
         }
         
-        const ext = path.extname(file);
-        if ((ext !== '.can' && ext !== '.ts') || file.endsWith('.d.ts')) continue;
-
         context.current++;
-        renderProgressBar(context.current, context.total, `Building ${file}`);
+        renderProgressBar(context.current, context.total, `Processing ${file}`);
         
         // Process the file using the unified buildFile function
         const built = await buildFile(fullPath, inputRoot, outputRoot, minify);
+        
         if (built) context.built++; else context.skipped++;
     }
 }
@@ -242,7 +247,7 @@ export async function build(specificFile?: string, minify: boolean = false) {
     await processDirectory(srcDir, srcDir, distDir, minify, context);
     await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context);
     process.stdout.write('\n');
-    console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} compiled, ${context.skipped} skipped.`);
+    console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} files updated, ${context.skipped} skipped.`);
 
     // Handle public/index.html injection for production
     const publicDir = path.join(cwd, 'public');
@@ -254,6 +259,20 @@ export async function build(specificFile?: string, minify: boolean = false) {
             htmlContent = htmlContent.replace('</body>', '<script type="module" src="/main.mjs"></script></body>');
         }
         fs.writeFileSync(path.join(distDir, 'index.html'), htmlContent);
+    }
+
+    // Copy other files from public/ (images, icons, etc.)
+    if (fs.existsSync(publicDir)) {
+        fs.readdirSync(publicDir).forEach(file => {
+            if (file === 'index.html') return;
+            const src = path.join(publicDir, file);
+            const dest = path.join(distDir, file);
+            if (fs.statSync(src).isDirectory()) {
+                fs.cpSync(src, dest, { recursive: true });
+            } else {
+                fs.copyFileSync(src, dest);
+            }
+        });
     }
 
     // Copy examples/index.html to dist/examples/index.html

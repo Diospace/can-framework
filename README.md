@@ -70,3 +70,12 @@ Endurance focuses on compiler-driven architectures and fine-grained reactivity t
 
 
  #"compile": "ts-node src/cli/build.ts"
+
+
+
+
+    "compile:all": "esbuild src/**/*.ts examples/**/*.ts --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs",
+
+
+   
+  
