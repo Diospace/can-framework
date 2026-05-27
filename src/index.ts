@@ -6,7 +6,7 @@
 export * from './runtime-helpers';
 
 // Export version or other metadata if needed
-export const VERSION = '0.0.1';
+export const VERSION = '1.0.3';
 
 // If you have a router module, export it as well:
 // export * from './router/index';
