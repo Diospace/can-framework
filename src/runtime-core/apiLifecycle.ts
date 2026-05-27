@@ -29,8 +29,7 @@ export const LifecycleHooks = {
 
 export function injectHook(type: symbol, hook: Function, target: Component | null = currentInstance) {
     if (target) {
-        // @ts-ignore
-        const hooks = target[type] || (target[type] = []);
+        const hooks = (target as any)[type] || ((target as any)[type] = []);
         hooks.push(hook);
     } else {
         warn(`Lifecycle hook "${String(type.description)}" called without active instance.`);
