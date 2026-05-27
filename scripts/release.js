@@ -33,10 +33,15 @@ async function release() {
         }
 
         // 2. Run a full clean build
-        console.log('--- Compiling production assets...');
+        console.log('--- Compiling library assets...');
         execSync('node scripts/build.js', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
+        });
+
+        console.log('--- Compiling CLI binary...');
+        execSync('npm run compile', { 
+            stdio: 'inherit'
         });
 
         // 3. Placeholder for tests
@@ -48,13 +53,24 @@ async function release() {
 
         // 5. Sync Git Tag
         const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
-        console.log(`--- Tagging version v${pkg.version}...`);
-        execSync(`git tag v${pkg.version}`, { stdio: 'inherit' });
-        execSync(`git push origin v${pkg.version}`, { stdio: 'inherit' });
+        const tagName = `v${pkg.version}`;
+        
+        console.log(`--- Syncing Git tag ${tagName}...`);
+        const tagExists = execSync(`git tag -l ${tagName}`).toString().trim();
+        
+        if (tagExists) {
+            console.log(`\x1b[33mWarning: Tag ${tagName} already exists. Skipping tag creation.\x1b[0m`);
+        } else {
+            execSync(`git tag ${tagName}`, { stdio: 'inherit' });
+            console.log(`--- Tag ${tagName} created.`);
+        }
+
+        execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
 
         console.log('\x1b[32m%s\x1b[0m', '>>> Framework successfully published to NPM!');
     } catch (err) {
-        console.error('\x1b[31m%s\x1b[0m', '>>> Release failed. Ensure the @decaspace scope exists on NPM and you have permissions.');
+        console.error('\x1b[31m%s\x1b[0m', '>>> Release process encountered an error:');
+        console.error(err.stderr ? err.stderr.toString() : err.message);
         process.exit(1);
     }
 }

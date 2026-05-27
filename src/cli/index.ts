@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -15,30 +14,6 @@ async function run() {
     const command = args[0];
     const cwd = process.cwd();
 
-    // 1. Source Detection: Check if we are running inside the framework's repository.
-    // We check for 'src/compiler/codegen.ts' to verify this is the framework source.
-    const isFrameworkSource = fs.existsSync(path.join(cwd, 'src', 'compiler', 'codegen.ts'));
-    
-    // 2. Execution Mode: Are we already running via a TypeScript loader (like tsx)?
-    const isRunningTs = __filename.endsWith('.ts');
-
-    if (isFrameworkSource && !isRunningTs) {
-        const tsxPath = path.join(cwd, 'node_modules', '.bin', 'tsx');
-        const sourceEntry = path.join(cwd, 'src', 'cli', 'index.ts');
-
-        if (fs.existsSync(tsxPath) && fs.existsSync(sourceEntry)) {
-            console.log('\x1b[33m[Can CLI]\x1b[0m Framework source detected. Running via tsx...');
-            
-            const child = spawn(tsxPath, [sourceEntry, ...args], { 
-                stdio: 'inherit', 
-                shell: process.platform === 'win32' 
-            });
-            child.on('exit', (code) => process.exit(code || 0));
-            return;
-        }
-    }
-
-    // 3. Command Dispatcher: Execute the logic
     switch (command) {
         case 'build':
             const { build } = await import('./build');
