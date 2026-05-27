@@ -28,9 +28,13 @@ async function run() {
 
         if (fs.existsSync(tsxPath) && fs.existsSync(sourceEntry)) {
             console.log('\x1b[33m[Can CLI]\x1b[0m Framework source detected. Running via tsx...');
+            
+            // Ensure the path is quoted for Windows to prevent EINVAL if paths contain spaces
+            const command = process.platform === 'win32' ? `"${tsxPath}"` : tsxPath;
+            
             const child = spawn(tsxPath, [sourceEntry, ...args], { 
                 stdio: 'inherit', 
-                shell: true 
+                shell: process.platform === 'win32' 
             });
             child.on('exit', (code) => process.exit(code || 0));
             return;
@@ -40,10 +44,8 @@ async function run() {
     // 3. Command Dispatcher: Execute the logic
     switch (command) {
         case 'build':
-            const { build } = await import('./build.js');
-            const buildTarget = args.slice(1).find(arg => !arg.startsWith('-'));
-            const isMinify = args.includes('--minify');
-            await build(buildTarget, isMinify);
+            const { build } = await import('./build');
+            await build(args[1]);
             break;
         case 'dev':
             const { dev } = await import('./dev');

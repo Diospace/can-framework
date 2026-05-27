@@ -1,5 +1,11 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@api/*": ["api/*"],
+      "@build/*": ["build/*"]
+    },
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -9,19 +15,22 @@
     "experimentalDecorators": true, // Essential for decorators
     "emitDecoratorMetadata": true,   // Essential for TypeORM to read decorator metadata
     "strictPropertyInitialization": false, // Often needed with TypeORM entities if you don't initialize all properties in the constructor
+    "useDefineForClassFields": true,
     "esModuleInterop": true,
     "allowJs": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
     "skipLibCheck": true,
-     "ignoreDeprecations": "5.0",
     "types": ["node", "reflect-metadata"] 
   },
 
   "include": [
     "src/**/*",
     "api/**/*",
-    "examples/**/*"
+    "examples/**/*",
+    "build/**/*"
   ],
   "exclude": [
     "node_modules",

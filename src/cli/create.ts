@@ -18,6 +18,8 @@ export function create(projectName: string) {
     fs.mkdirSync(root);
     fs.mkdirSync(path.join(root, 'public'));
     fs.mkdirSync(path.join(root, 'src'));
+    fs.mkdirSync(path.join(root, 'api'));
+    fs.mkdirSync(path.join(root, 'build'));
     fs.mkdirSync(path.join(root, 'src', 'components'));
 
     // Create package.json
@@ -46,19 +48,28 @@ export function create(projectName: string) {
     // Create tsconfig.json to ensure TypeScript and IDEs recognize the environment and .can files
     const tsconfigJson = {
         compilerOptions: {
-            target: "ES2020",
+            baseUrl: ".",
+            paths: {
+                "@/*": ["src/*"],
+                "@api/*": ["api/*"],
+                "@build/*": ["build/*"]
+            },
+            target: "ESNext",
             module: "ESNext",
-            moduleResolution: "NodeNext",
-            lib: ["ES2020", "DOM", "DOM.Iterable"],
+            moduleResolution: "Bundler",
+            lib: ["ESNext", "DOM", "DOM.Iterable"],
+            useDefineForClassFields: true,
             strict: true,
             esModuleInterop: true,
             skipLibCheck: true,
             forceConsistentCasingInFileNames: true,
             allowJs: true,
             resolveJsonModule: true,
-            isolatedModules: true
+            isolatedModules: true,
+            ignoreDeprecations: "5.0",
+            types: ["node"]
         },
-        include: ["src/**/*"]
+        include: ["src/**/*", "api/**/*", "build/**/*"]
     };
     fs.writeFileSync(path.join(root, 'tsconfig.json'), JSON.stringify(tsconfigJson, null, 2));
 

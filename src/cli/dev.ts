@@ -11,6 +11,8 @@ export async function dev() {
     const cwd = process.cwd();
     const srcDir = path.join(cwd, 'src');
     const examplesDir = path.join(cwd, 'examples');
+    const apiDir = path.join(cwd, 'api');
+    const buildDir = path.join(cwd, 'build');
 
     console.log('[Can Dev] Starting dev mode...');
     
@@ -50,6 +52,8 @@ export async function dev() {
     // Setup native filesystem watchers
     fs.watch(srcDir, watchOptions, (event, filename) => filename && handleEvent(path.join(srcDir, filename)));
     fs.watch(examplesDir, watchOptions, (event, filename) => filename && handleEvent(path.join(examplesDir, filename)));
+    fs.watch(apiDir, watchOptions, (event, filename) => filename && handleEvent(path.join(apiDir, filename)));
+    fs.watch(buildDir, watchOptions, (event, filename) => filename && handleEvent(path.join(buildDir, filename)));
 }
 
 // Run if called directly via 'node dist/cli/dev.mjs'

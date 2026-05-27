@@ -1,0 +1,50 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <div id="app">
+  <h1>{{ title }}</h1>
+  <p>Count is: {{ count }}</p>
+  <p>Double is: {{ doubleCount }}</p>
+  <p>filter {{you}}</p>
+  <button @click="increment">Increment</button>
+  <div c-if="count > 5">You reached a high score!</div>
+</div>
+
+<script src="../dist/cdn/can.compat.min.js"></script>
+<script>
+  const { createApp } = Can;
+
+  createApp({
+    data() {
+      return { 
+        title: 'Hello Can Framework!',
+        count: 0 ,
+        you:"Hello i am endurance"
+      };
+    },
+    computed: {
+      doubleCount() {
+        return this.count * 2;
+      }
+    },
+    methods: {
+      increment() {
+        this.count++;
+      }
+    },
+    filter:{
+
+    },
+    mounted() {
+      console.log('App is ready!');
+    }
+  }).mount('#app');
+</script>
+    
+</body>
+</html>

@@ -3,7 +3,7 @@
   "displayName": "Can Framework",
   "description": "A modern, high-performance web framework using Signal-based reactivity and Single File Components.",
   "publisher": "can-framework",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "type": "module",
   "license": "MIT",
   "icon": "ide-extension/icons/can.png",
@@ -14,13 +14,16 @@
   "homepage": "https://github.com/Diospace/can-framework#readme",
   "bugs": "https://github.com/Diospace/can-framework/issues",
   "bin": {
-    "can": "./dist/index.mjs"
+    "can": "./dist/index.mjs",
+    "can-framework": "./dist/index.mjs"
   },
   "main": "./dist/runtime-core/index.mjs",
   "module": "./dist/runtime-core/index.mjs",
   "types": "./dist/runtime-core/index.d.ts",
   "files": [
     "dist",
+    "api",
+    "build",
     "ide-extension",
     "README.md",
     "LICENSE"
@@ -36,7 +39,7 @@
     "prepublishOnly": "npm run build",
     "postinstall": "npm run build",
     "type-check": "tsc --noEmit",
-    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild",
+    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild --banner:js=\"#!/usr/bin/env node\"",
     "compile:all": "node dist/index.mjs build",
     "api": "ts-node src/cli/build.ts api/index.ts api/routes.ts && node dist/api/index.mjs",
     "api:dev": "ts-node api/index.ts",

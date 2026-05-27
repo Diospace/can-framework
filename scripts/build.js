@@ -32,7 +32,7 @@ try {
     const webpackMode = isProd ? 'production' : 'development';
 
     // Run the framework build with optional minification
-    execSync(`node dist/index.mjs build --clear ${minifyFlag}`, { stdio: 'inherit' });
+    execSync(`node dist/index.mjs build src api build --clear ${minifyFlag}`, { stdio: 'inherit' });
 
     console.log('\x1b[36m%s\x1b[0m', '>>> Bundling CDN Runtime Compiler (Output: dist/cdn)...');
     // Execute webpack with the appropriate mode
