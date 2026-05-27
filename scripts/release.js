@@ -46,6 +46,12 @@ async function release() {
         console.log('--- Publishing to NPM...');
         execSync('npm publish --access public', { stdio: 'inherit' });
 
+        // 5. Sync Git Tag
+        const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+        console.log(`--- Tagging version v${pkg.version}...`);
+        execSync(`git tag v${pkg.version}`, { stdio: 'inherit' });
+        execSync(`git push origin v${pkg.version}`, { stdio: 'inherit' });
+
         console.log('\x1b[32m%s\x1b[0m', '>>> Framework successfully published to NPM!');
     } catch (err) {
         console.error('\x1b[31m%s\x1b[0m', '>>> Release failed. Ensure the @decaspace scope exists on NPM and you have permissions.');
