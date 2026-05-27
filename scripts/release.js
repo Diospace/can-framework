@@ -42,8 +42,13 @@ async function release() {
         // 3. Placeholder for tests
         // execSync('npm test', { stdio: 'inherit' });
 
-        console.log('\x1b[32m%s\x1b[0m', '>>> Release preparation complete. Ready to publish!');
+        // 4. Final Publish
+        console.log('--- Publishing to NPM...');
+        execSync('npm publish --access public', { stdio: 'inherit' });
+
+        console.log('\x1b[32m%s\x1b[0m', '>>> Framework successfully published to NPM!');
     } catch (err) {
+        console.error('\x1b[31m%s\x1b[0m', '>>> Release failed. Ensure the @decaspace scope exists on NPM and you have permissions.');
         process.exit(1);
     }
 }

@@ -29,9 +29,6 @@ async function run() {
         if (fs.existsSync(tsxPath) && fs.existsSync(sourceEntry)) {
             console.log('\x1b[33m[Can CLI]\x1b[0m Framework source detected. Running via tsx...');
             
-            // Ensure the path is quoted for Windows to prevent EINVAL if paths contain spaces
-            const command = process.platform === 'win32' ? `"${tsxPath}"` : tsxPath;
-            
             const child = spawn(tsxPath, [sourceEntry, ...args], { 
                 stdio: 'inherit', 
                 shell: process.platform === 'win32' 

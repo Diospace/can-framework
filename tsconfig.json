@@ -1,11 +1,5 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"],
-      "@api/*": ["api/*"],
-      "@build/*": ["build/*"]
-    },
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "Bundler",
@@ -28,9 +22,7 @@
 
   "include": [
     "src/**/*",
-    "api/**/*",
     "examples/**/*",
-    "build/**/*"
   ],
   "exclude": [
     "node_modules",

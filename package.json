@@ -33,14 +33,15 @@
     "registry": "https://registry.npmjs.org/"
   },
   "scripts": {
-    "can": "node ./dist/index.mjs",
+    "can":"tsx src/cli/index.ts",
+    
     "build": "node scripts/build.js",
     "dev": "node scripts/dev.js",
     "prepublishOnly": "npm run build",
     "postinstall": "npm run build",
     "type-check": "tsc --noEmit",
-    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild --banner:js=\"#!/usr/bin/env node\"",
-    "compile:all": "node dist/index.mjs build",
+    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild --banner:js=\"#!/usr/bin/env node\\n\"",
+    "compile:all": "npm run can -- build",
     "api": "ts-node src/cli/build.ts api/index.ts api/routes.ts && node dist/api/index.mjs",
     "api:dev": "ts-node api/index.ts",
     "build:bundle": "webpack",

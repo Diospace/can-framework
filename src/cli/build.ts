@@ -17,8 +17,12 @@ import { cShowPlugin } from '../compiler/directives/c-show';
  * and handle example-specific path adjustments.
  */
 export function fixImports(code: string, fullPath: string): string {
+    // Strip shebangs (e.g., #!/usr/bin/env node) which cause SyntaxErrors in ESM (.mjs)
+    // especially if shifted off the first line during transpilation.
+    let fixed = code.replace(/^#!.*\n/, '');
+
     // 1. Handle standard imports/exports: import {x} from './y' or export {x} from './y'
-    let fixed = code.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.js|\.can|\.ts)?\2/g, "$1 $2$3.mjs$2");
+    fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.js|\.can|\.ts)?\2/g, "$1 $2$3.mjs$2");
     
     // 2. Handle dynamic imports: import('./y')
     fixed = fixed.replace(/import\((['"])(\..+?)(?:\.js|\.can|\.ts)?\1\)/g, "import($1$2.mjs$1)");
