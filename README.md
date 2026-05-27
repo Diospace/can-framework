@@ -82,14 +82,7 @@ Endurance focuses on compiler-driven architectures and fine-grained reactivity t
     "compile:all": "node dist/index.mjs build",
  
 
- 
-try {
-    // 1. Ensure the CLI is compiled before attempting to run it or type-check.
-    const cliEntry = path.resolve(__dirname, '../dist/index.mjs');
-    if (!fs.existsSync(cliEntry)) {
-        console.log('\x1b[33m%s\x1b[0m', '>>> dist/index.mjs not found. Bootstrapping CLI tool...');
-        execSync('npm run compile', { stdio: 'inherit' });
-    }
-
    
+
+
   
