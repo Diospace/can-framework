@@ -14,8 +14,8 @@
   "homepage": "https://github.com/Diospace/can-framework#readme",
   "bugs": "https://github.com/Diospace/can-framework/issues",
   "bin": {
-    "can": "node ./dist/index.mjs",
-    "can-framework": "node ./dist/index.mjs"
+    "can": "./dist/index.mjs",
+    "can-framework": "./dist/index.mjs"
   },
   "main": "./dist/runtime-core/index.mjs",
   "module": "./dist/runtime-core/index.mjs",
@@ -39,9 +39,8 @@
     "build": "node scripts/build.js",
     "dev": "node scripts/dev.js",
     "prepublishOnly": "npm run build",
-    "postinstall": "npm run build",
     "type-check": "tsc --noEmit",
-    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild",
+    "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild --banner:js=\"#!/usr/bin/env node\"",
     "compile:all": "npm run can -- build",
     "api": "ts-node src/cli/build.ts api/index.ts api/routes.ts && node dist/api/index.mjs",
     "api:dev": "ts-node api/index.ts",

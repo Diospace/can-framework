@@ -35,7 +35,7 @@ export function create(projectName: string) {
             "preview": "can preview"
         },
         "dependencies": {
-            "@decaspace/can-framework": "^1.0.0"
+            "@decaspace/can-framework": "^1.0.3"
         },
         "devDependencies": {
             "typescript": "^5.7.2",
