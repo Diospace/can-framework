@@ -6,6 +6,10 @@ import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 /**
  * Handles the production release sequence.
  */
@@ -47,7 +51,8 @@ async function release() {
         execSync('npm publish --access public', { stdio: 'inherit' });
 
         // 5. Sync Git Tag
-        const pkg = JSON.parse(fs.readFileSync('./package.json', 'utf-8'));
+        const pkgPath = path.resolve(__dirname, '../package.json');
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
         const tagName = `v${pkg.version}`;
         
         console.log(`--- Syncing Git tag ${tagName}...`);
