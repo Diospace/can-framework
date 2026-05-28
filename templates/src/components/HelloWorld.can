@@ -1,0 +1,19 @@
+component HelloWorld {
+    var props = ['msg'];
+    var template = `
+        <div class="hello-box">
+            <h2>{{msg}}</h2>
+            <p>Edit <code>src/App.can</code> to start building your application.</p>
+            <div class="links">
+                <a href="https://github.com/can-framework" target="_blank">Documentation</a>
+                <a href="https://github.com/can-framework" target="_blank">GitHub</a>
+            </div>
+        </div>
+    `;
+}
+
+<style scoped>
+.hello-box { text-align: center; margin-top: 2rem; }
+.links { margin-top: 1rem; }
+.links a { color: #42b883; margin: 0 10px; text-decoration: none; font-weight: bold; }
+</style>

@@ -69,17 +69,6 @@ Endurance focuses on compiler-driven architectures and fine-grained reactivity t
 - **Project**: Can Framework
 
 
- #"compile": "ts-node src/cli/build.ts"
-
-
-
-
-    "compile:all": "esbuild src/**/*.ts examples/**/*.ts --platform=node --format=esm --outdir=dist --out-extension:.js=.mjs",
-
-
- "can": "node ./dist/index.mjs",
- "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/index.mjs --external:esbuild --banner:js=\"#!/usr/bin/env node\"",
-    "compile:all": "node dist/index.mjs build",
  
 
    

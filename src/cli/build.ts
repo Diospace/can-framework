@@ -203,6 +203,7 @@ export async function build(specificFile?: string, minify: boolean = false) {
     const cwd = process.cwd();
     const srcDir = path.join(cwd, 'src');
     const examplesDir = path.join(cwd, 'examples');
+    const apiDir = path.join(cwd, 'api'); // Define API directory
     const distDir = path.join(cwd, 'dist');
 
     // Feature: clear-dist flag
@@ -211,7 +212,7 @@ export async function build(specificFile?: string, minify: boolean = false) {
         // Preserve the CLI bundle so the build tool doesn't delete itself
         const items = fs.readdirSync(distDir);
         for (const item of items) {
-            if (item === 'index.mjs' || item === 'cli') continue;
+            if (item === 'index.mjs' || item === 'bundler' || item === 'cli') continue;
             fs.rmSync(path.join(distDir, item), { recursive: true, force: true });
         }
     }
@@ -221,7 +222,7 @@ export async function build(specificFile?: string, minify: boolean = false) {
     }
 
     const context: BuildContext = {
-        total: specificFile ? 1 : (countFiles(srcDir) + countFiles(examplesDir)),
+        total: specificFile ? 1 : (countFiles(srcDir) + countFiles(examplesDir) + countFiles(apiDir)), // Include API files in total count
         current: 0,
         built: 0,
         skipped: 0
@@ -239,6 +240,8 @@ export async function build(specificFile?: string, minify: boolean = false) {
             built = await buildFile(fullPath, srcDir, distDir, minify);
         } else if (fullPath.startsWith(examplesDir)) {
             built = await buildFile(fullPath, examplesDir, path.join(distDir, 'examples'), minify);
+        } else if (fullPath.startsWith(apiDir)) { // Handle specific API file build
+            built = await buildFile(fullPath, apiDir, path.join(distDir, 'api'), minify);
         }
         if (built) context.built++; else context.skipped++;
         process.stdout.write('\n');
@@ -247,6 +250,7 @@ export async function build(specificFile?: string, minify: boolean = false) {
 
     await processDirectory(srcDir, srcDir, distDir, minify, context);
     await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context);
+    await processDirectory(apiDir, apiDir, path.join(distDir, 'api'), minify, context); // Process API directory
     process.stdout.write('\n');
     console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} files updated, ${context.skipped} skipped.`);
 
@@ -289,6 +293,9 @@ export async function build(specificFile?: string, minify: boolean = false) {
         }
         fs.writeFileSync(path.join(exampleOutDir, 'index.html'), htmlContent);
     }
+
+    // Generate API barrel file after all API routes are built
+    await generateApiBarrelFile(path.join(distDir, 'api'));
 }
 
 // Run if called directly
@@ -300,4 +307,37 @@ const isMain = () => {
 
 if (isMain()) {
     build();
+}
+
+// Helper to convert kebab-case to camelCase
+function kebabToCamelCase(kebab: string): string {
+    return kebab.replace(/-([a-z])/g, (g) => g[1].toUpperCase());
+}
+
+/**
+ * Generates a barrel file (routes.mjs) for all API routes in the output directory.
+ * Each API route file is assumed to export a default handler.
+ */
+async function generateApiBarrelFile(apiOutputRoot: string) {
+    if (!fs.existsSync(apiOutputRoot)) {
+        return;
+    }
+
+    const files = fs.readdirSync(apiOutputRoot);
+    const exportStatements: string[] = [];
+
+    for (const file of files) {
+        // Exclude index.mjs (main server entry), routes.mjs (the barrel itself), and any files within 'route/' subdirectories
+        if (file.endsWith('.mjs') && file !== 'index.mjs' && file !== 'routes.mjs' && !file.startsWith('route/')) {
+            const baseName = path.basename(file, '.mjs');
+            const camelCaseName = kebabToCamelCase(baseName);
+            exportStatements.push(`export { default as ${camelCaseName} } from './${file}';`);
+        }
+    }
+
+    if (exportStatements.length > 0) {
+        const barrelFilePath = path.join(apiOutputRoot, 'routes.mjs');
+        fs.writeFileSync(barrelFilePath, exportStatements.join('\n') + '\n');
+        console.log(`\x1b[32mGenerated API barrel file:\x1b[0m ${path.relative(process.cwd(), barrelFilePath)}`);
+    }
 }

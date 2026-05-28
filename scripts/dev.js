@@ -8,7 +8,7 @@ console.log('\x1b[35m%s\x1b[0m', '>>> Launching Dev Server...');
 
 try {
     // Calls the 'dev' command which triggers serve.ts logic
-    execSync('node dist/index.mjs dev', { stdio: 'inherit' });
+    execSync('node dist/bundler/index.mjs dev', { stdio: 'inherit' });
 } catch (error) {
     // Dev server stopped
     process.exit(0);

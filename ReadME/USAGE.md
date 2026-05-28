@@ -26,7 +26,7 @@ The framework includes a Command Line Interface (CLI) located at `src/cli/index.
 To scaffold a new project structure:
 
 ```bash
-node dist/cli/index.mjs create my-new-app
+node dist/bundler/index.mjs create my-new-app
 ```
 
 ### Static Site Generation (SSG)

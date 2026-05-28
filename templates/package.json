@@ -1,0 +1,21 @@
+{
+  "name": "can-app",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "can dev",
+    "build": "can build",
+    "serve": "can serve",
+    "ssg": "can ssg",
+    "disk": "can disk",
+    "preview": "can preview"
+  },
+  "dependencies": {
+    "@decaspace/can-framework": "latest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.0.0"
+  }
+}

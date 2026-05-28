@@ -19,11 +19,7 @@ try {
     //     execSync('npm run compile', { stdio: 'inherit' });
     // }
 
-     // 1. Always ensure a fresh CLI compilation for the package distribution
-    console.log('\x1b[36m%s\x1b[0m', '>>> Compiling CLI distribution bundle...');
-    execSync('npm run compile', { stdio: 'inherit' });
-
-    // 2. Run Type Checking
+    // 1. Run Type Checking
     console.log('\x1b[36m%s\x1b[0m', '>>> Running type check...');
     execSync('npm run type-check', { stdio: 'inherit' });
 
@@ -38,6 +34,10 @@ try {
     // Use tsx to run the CLI from source for internal builds. 
     // This avoids using a potentially broken dist/index.mjs to perform the build.
     execSync(`npx tsx src/cli/index.ts build src api build --clear ${minifyFlag}`, { stdio: 'inherit' });
+
+    // 2. Always ensure a fresh CLI compilation for the package distribution
+    console.log('\x1b[36m%s\x1b[0m', '>>> Compiling CLI distribution bundle...');
+    execSync('npm run compile', { stdio: 'inherit' });
 
     console.log('\x1b[36m%s\x1b[0m', '>>> Bundling CDN Runtime Compiler (Output: dist/cdn)...');
     // Execute webpack with the appropriate mode

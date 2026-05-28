@@ -39,11 +39,6 @@ async function release() {
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        console.log('--- Compiling CLI binary...');
-        execSync('npm run compile', { 
-            stdio: 'inherit'
-        });
-
         // 3. Placeholder for tests
         // execSync('npm test', { stdio: 'inherit' });
 

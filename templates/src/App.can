@@ -1,0 +1,17 @@
+import { HelloWorld } from './components/HelloWorld.can';
+
+component App {
+    var message = "Welcome to Can Framework";
+    var template = `
+        <div class="container">
+            <img src="/logo.svg" alt="Can Logo" class="logo" />
+            <HelloWorld msg="{{message}}" />
+        </div>
+    `;
+}
+
+<style scoped>
+.container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 10vh; }
+.logo { width: 120px; height: 120px; transition: transform 0.3s ease; }
+.logo:hover { transform: rotate(10deg) scale(1.1); }
+</style>
