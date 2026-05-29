@@ -87,6 +87,13 @@ npm version patch
 # Push the commit and the new tag to GitHub
 git push origin main --tags
 
+# Create a tag for the current version (e.g., v1.0.4)
+git tag v1.0.4
 
+# Push only the specific tag
+git push origin v1.0.4
+
+
+# publish to npm
   npm login 
   npm run release
