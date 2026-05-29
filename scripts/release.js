@@ -45,27 +45,16 @@ async function release() {
             process.exit(1);
         }
 
-        // 2. Run a full clean build
-        console.log('--- Step 1: Compiling core library...');
-        // execSync('node scripts/build.js', { 
-        //     stdio: 'inherit', 
-        //     env: { ...process.env, NODE_ENV: 'production' } 
-        // });
-       execSync('npm run build', { 
+        // 2. Run a full clean build (Core, CLI Bundle, and CDN)
+        console.log('--- Step 1: Compiling core library and CLI...');
+        execSync('npm run build', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        // 2.0 Compile CLI distribution bundle
-        console.log('--- Step 2: Compiling CLI distribution bundle...');
-        execSync('npm run compile', { 
-            stdio: 'inherit', 
-            env: { ...process.env, NODE_ENV: 'production' } 
-        });
-    
         // 2.1 Compile individual modules and Type Definitions
-        // This is critical for IntelliSense and Tree-shaking in the NPM package.
-        console.log('--- Step 3: Generating individual modules and types...');
+        // This generates the unbundled artifacts required for tree-shaking and IntelliSense.
+        console.log('--- Step 2: Generating unbundled modules and types...');
         execSync('npm run compile:all', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 

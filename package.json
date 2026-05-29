@@ -38,7 +38,6 @@
     "can": "tsx src/cli/index.ts",
     "build": "node scripts/build.js",
     "dev": "node scripts/dev.js",
-    "prepublishOnly": "npm run build",
     "type-check": "tsc --noEmit",
     "compile": "esbuild src/cli/index.ts --bundle --platform=node --format=esm --outfile=dist/bundler/index.mjs --external:esbuild",
     "compile:all": "npm run can -- build && tsc --emitDeclarationOnly",
