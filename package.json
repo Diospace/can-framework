@@ -3,7 +3,7 @@
   "displayName": "Can Framework",
   "description": "A modern, high-performance web framework using Signal-based reactivity and Single File Components.",
   "publisher": "can-framework",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "license": "MIT",
   "icon": "ide-extension/icons/can.png",
@@ -14,9 +14,8 @@
   "homepage": "https://github.com/Diospace/can-framework#readme",
   "bugs": "https://github.com/Diospace/can-framework/issues",
   "bin": {
-     "can": "./dist/bundler/index.mjs",
+    "can": "./dist/bundler/index.mjs",
     "can-framework": "./dist/bundler/index.mjs"
-
   },
   "main": "./dist/runtime-core/index.mjs",
   "module": "./dist/runtime-core/index.mjs",
@@ -36,7 +35,6 @@
   },
   "scripts": {
     "can": "tsx src/cli/index.ts",
-    
     "build": "node scripts/build.js",
     "dev": "node scripts/dev.js",
     "prepublishOnly": "npm run build",
