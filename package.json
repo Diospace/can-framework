@@ -3,7 +3,7 @@
   "displayName": "Can Framework",
   "description": "A modern, high-performance web framework using Signal-based reactivity and Single File Components.",
   "publisher": "can-framework",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "type": "module",
   "license": "MIT",
   "icon": "ide-extension/icons/can.png",
