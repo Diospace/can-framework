@@ -28,14 +28,15 @@ async function release() {
 
         
         // 0. Safety Check: Ensure we are on the main branch
-        // const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-        // if (branch !== 'main' && !isForce) {
-        //     console.error('\x1b[31m%s\x1b[0m', `Error: You are on branch "${branch}". Releases should only be made from "main".`);
-        //     process.exit(1);
-        // }
+        const isForce = process.argv.includes('--force');
+        const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+        if (branch !== 'main' && !isForce) {
+            console.error('\x1b[31m%s\x1b[0m', `Error: You are on branch "${branch}". Releases should only be made from "main".`);
+            console.log('To bypass this check, run: npm run release -- --force');
+            process.exit(1);
+        }
 
         // 1. Check for uncommitted changes (Safety check) - Bypass with --force
-        const isForce = process.argv.includes('--force');
         const status = execSync('git status --porcelain').toString();
         if (status && !isForce) {
             console.error('\x1b[31m%s\x1b[0m', 'Error: You have uncommitted changes. Please commit or stash them before releasing.');
