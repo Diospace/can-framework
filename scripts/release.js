@@ -38,11 +38,20 @@ async function release() {
 
         // 2. Run a full clean build
         console.log('--- Compiling library assets...');
-        execSync('node scripts/build.js', { 
+        // execSync('node scripts/build.js', { 
+        //     stdio: 'inherit', 
+        //     env: { ...process.env, NODE_ENV: 'production' } 
+        // });
+       execSync('npm run build', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
+        //2.0 Compile all assets (if needed)
+         execSync('npm run compile:all', { 
+            stdio: 'inherit', 
+            env: { ...process.env, NODE_ENV: 'production' } 
+        });
         // 3. Placeholder for tests
         // execSync('npm test', { stdio: 'inherit' });
 
