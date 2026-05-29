@@ -88,4 +88,5 @@ npm version patch
 git push origin main --tags
 
 
-  
+  npm login 
+  npm run release
