@@ -97,3 +97,17 @@ git push origin v1.0.4
 # publish to npm
   npm login 
   npm run release
+
+
+
+  # 1. Stage all changes (tsconfig, create.ts, etc.)
+git add .
+
+# 2. Commit the improvements
+git commit -m "feat: improve framework linking, scaffolding, and release process"
+
+# 3. Update the version (this creates a new commit and tag locally)
+npm version patch
+
+# 4. Run the release script (this handles building, publishing to NPM, and pushing to GitHub)
+npm run release
