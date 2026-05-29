@@ -34,18 +34,33 @@ export function create(projectName: string, templatesDir: string, frameworkVersi
             const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
             pkg.name = projectName;
             
+            const isLocalDev = process.env.CAN_LOCAL_DEV === 'true';
+            const frameworkRoot = path.resolve(templatesDir, '../..');
+
             // Ensure the project depends on the current version of the framework
             if (pkg.dependencies && pkg.dependencies['@decaspace/can-framework']) {
-                pkg.dependencies['@decaspace/can-framework'] = `^${frameworkVersion}`;
                 // If running in local dev mode, point to the local framework folder
-                if (process.env.CAN_LOCAL_DEV === 'true') {
-                    const frameworkRoot = path.resolve(templatesDir, '../..');
+                if (isLocalDev) {
                     pkg.dependencies['@decaspace/can-framework'] = `file:${frameworkRoot}`;
                 } else {
                     pkg.dependencies['@decaspace/can-framework'] = `^${frameworkVersion}`;
                 }
             }
             fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2));
+
+            // 2.1 Update tsconfig.json paths for local development
+            const tsconfigPath = path.join(root, 'tsconfig.json');
+            if (fs.existsSync(tsconfigPath)) {
+                const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
+                if (isLocalDev) {
+                    // Calculate relative path from new project to framework source
+                    const relativeSrc = path.relative(root, path.join(frameworkRoot, 'src', 'index.ts')).replace(/\\/g, '/');
+                    tsconfig.compilerOptions.paths = {
+                        "@decaspace/can-framework": [relativeSrc]
+                    };
+                    fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
+                }
+            }
         }
 
         // 3. Optional: Automatically run npm install

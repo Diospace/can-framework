@@ -23,19 +23,18 @@ async function release() {
             console.log(`\x1b[36mLogged in as: ${user}\x1b[0m`);
         } catch (e) {
             console.error('\x1b[31m%s\x1b[0m', 'Error: You are not logged into npm. Please run "npm login" first.');
+        const isForce = process.argv.includes('--force');
+
+        // 0. Safety Check: Ensure we are on the main branch
+        const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
+        if (branch !== 'main' && !isForce) {
+            console.error('\x1b[31m%s\x1b[0m', `Error: You are on branch "${branch}". Releases should only be made from "main".`);
             process.exit(1);
         }
 
-        
-        // 0. Safety Check: Ensure we are on the main branch
-        // const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
-        // if (branch !== 'main' && !isForce) {
-        //     console.error('\x1b[31m%s\x1b[0m', `Error: You are on branch "${branch}". Releases should only be made from "main".`);
-        //     process.exit(1);
-        // }
-
         // 1. Check for uncommitted changes (Safety check) - Bypass with --force
         const isForce = process.argv.includes('--force');
+        // 1. Safety Check: Check for uncommitted changes
         const status = execSync('git status --porcelain').toString();
         if (status && !isForce) {
             console.error('\x1b[31m%s\x1b[0m', 'Error: You have uncommitted changes. Please commit or stash them before releasing.');
@@ -45,32 +44,35 @@ async function release() {
         }
 
         // 2. Run a full clean build
-        console.log('--- Step 1: Compiling core library...');
+        console.log('--- Compiling library assets...');
         // execSync('node scripts/build.js', { 
         //     stdio: 'inherit', 
         //     env: { ...process.env, NODE_ENV: 'production' } 
         // });
        execSync('npm run build', { 
+        console.log('--- Step 1: Compiling core library...');
+        execSync('npm run build', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        // 2.0 Compile CLI distribution bundle
-        console.log('--- Step 2: Compiling CLI distribution bundle...');
+        //2.0 Compile all assets (if needed)
+         execSync('npm run compile:all', { 
+        console.log('--- Step 2: Compiling CLI tool...');
         execSync('npm run compile', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
-    
-        // 2.1 Compile individual modules and Type Definitions
-        // This is critical for IntelliSense and Tree-shaking in the NPM package.
-        console.log('--- Step 3: Generating individual modules and types...');
+        // 3. Placeholder for tests
+
+        console.log('--- Step 3: Compiling all framework assets...');
         execSync('npm run compile:all', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        // 3. Placeholder for tests
+        // 3. Optional: Run Tests
+        // console.log('--- Running tests...');
         // execSync('npm test', { stdio: 'inherit' });
 
         // 4. Final Publish
@@ -90,19 +92,21 @@ async function release() {
         } else {
             execSync(`git tag ${tagName}`, { stdio: 'inherit' });
             console.log(`--- Tag ${tagName} created.`);
+            console.error('\x1b[31m%s\x1b[0m', `Error: Tag ${tagName} already exists. Did you forget to run "npm version"?`);
+            process.exit(1);
         }
 
-         // 6. Push changes to trigger GitHub Actions
+        execSync(`git tag ${tagName}`, { stdio: 'inherit' });
+        console.log(`--- Tag ${tagName} created.`);
+
+        // 6. Push changes to trigger GitHub Actions
         console.log('--- Pushing to GitHub...');
         execSync(`git push origin main`, { stdio: 'inherit' });
         execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
 
-    
-
         console.log('\x1b[32m%s\x1b[0m', '>>> Framework successfully published to NPM!');
-        // console.log('\x1b[32m%s\x1b[0m', `>>> Version ${tagName} pushed successfully!`);
-        // console.log('\x1b[36m%s\x1b[0m', 'GitHub Actions will now handle the NPM publish with provenance.');
- 
+        console.log('\x1b[32m%s\x1b[0m', `>>> Version ${tagName} pushed successfully!`);
+        console.log('\x1b[36m%s\x1b[0m', 'GitHub Actions will now handle the NPM publish with provenance.');
     } catch (err) {
         console.error('\x1b[31m%s\x1b[0m', '>>> Release process encountered an error:');
         console.error(err.stderr ? err.stderr.toString() : err.message);
