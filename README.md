@@ -70,8 +70,22 @@ Endurance focuses on compiler-driven architectures and fine-grained reactivity t
 
 
  
+# 1. Stage all your changes
+git add .
+
+# 2. Commit the changes with a descriptive message
+git commit -m "feat: add new store module logic"
+
+# 3. Push to your main branch on GitHub
+git push origin main
 
    
+
+# Increment version (patch, minor, or major)
+npm version patch
+
+# Push the commit and the new tag to GitHub
+git push origin main --tags
 
 
   
