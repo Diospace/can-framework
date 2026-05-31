@@ -151,7 +151,7 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
                 importHelpers: true,
                 jsx: ts.JsxEmit.None,
                 sourceMap: true,
-                inlineSources: true
+                inlineSources: false
             }
         });
 
@@ -164,6 +164,10 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         }
 
         saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');
+        
+        if (transpiledOutput.sourceMapText) {
+            saveFile(transpiledOutput.sourceMapText, fullPath, inputRoot, outputRoot, '.mjs.map');
+        }
     } else {
         // Static asset (HTML, CSS, JSON, Images, etc.): Copy instead of compile
         fs.copyFileSync(fullPath, outPath);
@@ -199,11 +203,12 @@ async function processDirectory(dir: string, inputRoot: string, outputRoot: stri
     }
 }
 
-export async function build(specificFile?: string, minify: boolean = false) {
+export async function build(targets?: string[], minify: boolean = false) {
     const cwd = process.cwd();
     const srcDir = path.join(cwd, 'src');
     const examplesDir = path.join(cwd, 'examples');
     const apiDir = path.join(cwd, 'api'); // Define API directory
+    const buildDir = path.join(cwd, 'build'); // Define Build directory
     const distDir = path.join(cwd, 'dist');
 
     // Feature: clear-dist flag
@@ -221,8 +226,15 @@ export async function build(specificFile?: string, minify: boolean = false) {
         fs.mkdirSync(distDir, { recursive: true });
     }
 
+    const hasTargets = targets && targets.length > 0;
+
     const context: BuildContext = {
-        total: specificFile ? 1 : (countFiles(srcDir) + countFiles(examplesDir) + countFiles(apiDir)), // Include API files in total count
+        total: hasTargets 
+            ? targets!.reduce((sum, t) => {
+                const p = path.resolve(cwd, t);
+                return sum + (fs.existsSync(p) ? (fs.statSync(p).isDirectory() ? countFiles(p) : 1) : 0);
+              }, 0)
+            : (countFiles(srcDir) + countFiles(examplesDir) + countFiles(apiDir) + countFiles(buildDir)),
         current: 0,
         built: 0,
         skipped: 0
@@ -230,27 +242,37 @@ export async function build(specificFile?: string, minify: boolean = false) {
 
     console.log(`Compiling Can project${context.total > 0 ? ` (${context.total} files)` : ''}...`);
 
-    if (specificFile) {
-        const fullPath = path.resolve(cwd, specificFile);
-        context.current++;
-        renderProgressBar(context.current, context.total, `Building ${path.basename(fullPath)}`);
-        
-        let built = false;
-        if (fullPath.startsWith(srcDir)) {
-            built = await buildFile(fullPath, srcDir, distDir, minify);
-        } else if (fullPath.startsWith(examplesDir)) {
-            built = await buildFile(fullPath, examplesDir, path.join(distDir, 'examples'), minify);
-        } else if (fullPath.startsWith(apiDir)) { // Handle specific API file build
-            built = await buildFile(fullPath, apiDir, path.join(distDir, 'api'), minify);
+    if (hasTargets) {
+        for (const target of targets!) {
+            const fullPath = path.resolve(cwd, target);
+            if (!fs.existsSync(fullPath)) continue;
+
+            const isDir = fs.statSync(fullPath).isDirectory();
+            
+            let inputRoot = '';
+            let outputRoot = '';
+            if (fullPath.startsWith(srcDir)) { inputRoot = srcDir; outputRoot = distDir; }
+            else if (fullPath.startsWith(examplesDir)) { inputRoot = examplesDir; outputRoot = path.join(distDir, 'examples'); }
+            else if (fullPath.startsWith(apiDir)) { inputRoot = apiDir; outputRoot = path.join(distDir, 'api'); }
+            else if (fullPath.startsWith(buildDir)) { inputRoot = buildDir; outputRoot = path.join(distDir, 'build'); }
+            else { inputRoot = path.dirname(fullPath); outputRoot = distDir; }
+
+            if (isDir) {
+                await processDirectory(fullPath, inputRoot, outputRoot, minify, context);
+            } else {
+                context.current++;
+                renderProgressBar(context.current, context.total, `Building ${path.basename(fullPath)}`);
+                const built = await buildFile(fullPath, inputRoot, outputRoot, minify);
+                if (built) context.built++; else context.skipped++;
+            }
         }
-        if (built) context.built++; else context.skipped++;
-        process.stdout.write('\n');
-        return;
+    } else {
+        await processDirectory(srcDir, srcDir, distDir, minify, context);
+        await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context);
+        await processDirectory(apiDir, apiDir, path.join(distDir, 'api'), minify, context);
+        await processDirectory(buildDir, buildDir, path.join(distDir, 'build'), minify, context);
     }
 
-    await processDirectory(srcDir, srcDir, distDir, minify, context);
-    await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context);
-    await processDirectory(apiDir, apiDir, path.join(distDir, 'api'), minify, context); // Process API directory
     process.stdout.write('\n');
     console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} files updated, ${context.skipped} skipped.`);
 

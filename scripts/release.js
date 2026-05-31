@@ -52,13 +52,10 @@ async function release() {
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        // 2.1 Compile individual modules and Type Definitions
-        // This generates the unbundled artifacts required for tree-shaking and IntelliSense.
-        console.log('--- Step 2: Generating unbundled modules and types...');
-        execSync('npm run compile:all', { 
-            stdio: 'inherit', 
-            env: { ...process.env, NODE_ENV: 'production' } 
-        });
+        // 2.1 Generate Type Definitions
+        // The build script already handled transpilation, so we only need tsc for .d.ts files.
+        console.log('--- Step 2: Generating type definitions...');
+        execSync('npx tsc --emitDeclarationOnly', { stdio: 'inherit' });
 
         // 3. Placeholder for tests
         // execSync('npm test', { stdio: 'inherit' });

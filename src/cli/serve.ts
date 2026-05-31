@@ -147,7 +147,7 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
                         const relativePath = path.relative(cwd, fullPath);
                         console.log(`\n[Watch] Change: ${relativePath}`);
                         try {
-                            await build(relativePath);
+                            await build([relativePath]);
                             
                             // Map source path to served URL
                             let url = '/' + path.relative(cwd, fullPath).replace(/\\/g, '/');

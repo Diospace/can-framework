@@ -40,7 +40,8 @@ async function run() {
     switch (command) {
         case 'build':
             const { build } = await import('./build');
-            await build(args[1]);
+            const targets = args.slice(1).filter(arg => !arg.startsWith('--'));
+            await build(targets.length > 0 ? targets : undefined);
             break;
         case 'dev':
             const { dev } = await import('./dev');

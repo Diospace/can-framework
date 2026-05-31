@@ -39,7 +39,7 @@ export async function dev() {
             
             try {
                 // Trigger the incremental build logic already present in build.ts
-                await build(relativePath);
+                await build([relativePath]);
             } catch (err) {
                 console.error(`[Can Dev] Build failed for ${relativePath}:`, err);
             }
