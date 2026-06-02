@@ -33,10 +33,11 @@ export async function transpile(content: string, plugins: CompilerPlugin[] = [],
         cValidatePlugin
     ];
 
-    // Combine with passed plugins, ensuring no duplicates by checking plugin references
+    // Combine with passed plugins, ensuring no duplicates by checking plugin names
     const allPlugins = [...basePlugins];
+    const baseNames = new Set(basePlugins.map(p => p.name));
     for (const plugin of plugins) {
-        if (!allPlugins.includes(plugin)) {
+        if (!baseNames.has(plugin.name)) {
             allPlugins.push(plugin);
         }
     }

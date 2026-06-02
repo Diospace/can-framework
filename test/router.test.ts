@@ -1,40 +1,29 @@
 import { describe, test, expect, beforeEach, vi } from 'vitest';
-// Mock browser environment for Node.js testing
-const mockPushState = vi.fn();
-const mockReplaceState = vi.fn();
-
-Object.defineProperty(global, 'window', {
-    value: {
-        location: { pathname: '/' },
-        history: {
-            pushState: mockPushState,
-            replaceState: mockReplaceState
-        },
-        addEventListener: vi.fn()
-    },
-    writable: true
-});
-
 import { Router } from '../src/router/Router';
+import { nextTick } from '../src/runtime-dom/nextTick';
 
 describe('Router', () => {
     beforeEach(() => {
-        mockPushState.mockClear();
-        (window.location as any).pathname = '/';
+        // Reset history state for each test using the real Happy DOM API
+        window.history.pushState({}, '', '/');
     });
 
     test('should resolve initial route', () => {
         const routes = [{ path: '/', component: 'home-page' }];
-        const router = new Router(routes);
-        expect(router.matchedComponent).toBe('home-page');
+        const router = new Router({ routes });
+        expect(router.currentRoute.value?.component).toBe('home-page');
     });
 
-    test('should navigate and update signal', () => {
+    test('should navigate and update signal', async () => {
         const routes = [{ path: '/about', component: 'about-page' }];
-        const router = new Router(routes);
-
+        const router = new Router({ routes });
+        
+        const pushSpy = vi.spyOn(window.history, 'pushState'); // Spy on the actual history method
+        
         router.push('/about');
-        expect(router.currentRoute.value).toBe('/about');
-        expect(mockPushState).toHaveBeenCalled();
+        
+        await nextTick(); // Wait for potential reactive updates
+        expect(router.currentRoute.value?.path).toBe('/about');
+        expect(pushSpy).toHaveBeenCalled();
     });
 });
