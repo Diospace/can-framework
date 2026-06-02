@@ -21,7 +21,7 @@
   "main": "./out/extension.js",
   "scripts": {
     "vscode:prepublish": "npm run clean && npm run build",
-    "clean": "npx shx rm -rf out",
+    "clean": "npx shx rm -rf out && npx shx rm -rf *.vsix",
     "build": "esbuild extension.ts server.ts --bundle --outdir=out --external:vscode --external:esbuild --format=cjs --platform=node",
     "watch": "esbuild extension.ts server.ts --bundle --outdir=out --external:vscode --external:esbuild --format=cjs --platform=node --watch",
     "compile": "tsc -p ./ --noEmit"
