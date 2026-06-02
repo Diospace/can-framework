@@ -2,7 +2,7 @@
   "name": "can-language-support",
   "displayName": "Can Framework Official Tooling",
   "description": "Language support and themes for the Can Framework",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "can-framework",
   "icon": "icons/can.png",
   "license": "MIT",
@@ -35,7 +35,8 @@
     "@types/node": "^20.0.0",
     "@types/vscode": "^1.70.0",
     "esbuild": "^0.28.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "shx": "^0.3.4"
   },
   "categories": [
     "Programming Languages",
