@@ -111,4 +111,7 @@ function showHelp() {
     console.log('  \x1b[36moptimize [dir]\x1b[0m Pre-compile template expressions for production\n');
 }
 
-run().catch(err => console.error('\x1b[31m[CLI Error]:\x1b[0m', err));
+run().catch(err => {
+    console.error('\x1b[31m[CLI Error]:\x1b[0m', err);
+    process.exit(1);
+});

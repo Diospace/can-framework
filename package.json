@@ -54,7 +54,7 @@
     "build:cdn": "webpack --config webpack.config.cdn2.cjs",
     "build:cdn:modern": "node scripts/cdn/build-cdn.js",
     "build:cdn:all": "npm run build:cdn && npm run build:cdn:modern",
-    "test": "vitest",
+    "test": "vitest --environment happy-dom",
     "vscode:prepublish": "npm run build",
     "release": "node scripts/release.js"
   },
