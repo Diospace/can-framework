@@ -1277,27 +1277,30 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
  */
 function createMatcher() {
   var routes = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
-  var compiledRoutes = routes.map(function (route) {
+  var safeRoutes = routes || [];
+  var compiledRoutes = safeRoutes.map(function (route) {
     var paramNames = [];
 
     // Transform /user/:id into a regex pattern and track param names
-    var regexPath = route.path.replace(/\//g, '\\/') // Escape slashes
+    var regexPath = (route.path || '/').replace(/\//g, '\\/') // Escape slashes
     .replace(/:([a-zA-Z_$][a-zA-Z0-9_$]*)/g, function (_, name) {
       paramNames.push(name);
       return '([^\\/]+)'; // Capture segment
     });
     return _objectSpread(_objectSpread({}, route), {}, {
-      regex: new RegExp("^".concat(regexPath, "$")),
+      regex: new RegExp("^".concat(regexPath, "\\/?$")),
+      // Handle optional trailing slash
       paramNames: paramNames
     });
   });
   return function (path) {
+    var normalizedPath = path.split('?')[0].split('#')[0] || '/';
     var _iterator = _createForOfIteratorHelper(compiledRoutes),
       _step;
     try {
       var _loop = function _loop() {
           var route = _step.value;
-          var match = path.match(route.regex);
+          var match = normalizedPath.match(route.regex);
           if (match) {
             var params = {};
             route.paramNames.forEach(function (name, index) {
