@@ -20,7 +20,7 @@ export interface MatchResult {
  * createMatcher: Compiles route paths into Regular Expressions 
  * to support dynamic parameters (e.g., /user/:id).
  */
-export function createMatcher(routes: RouteRecord[]) {
+export function createMatcher(routes: RouteRecord[] = []) {
     const compiledRoutes = routes.map(route => {
         const paramNames: string[] = [];
         

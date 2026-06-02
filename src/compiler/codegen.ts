@@ -24,19 +24,23 @@ import * as ts from 'typescript';
  * Simple transpiler to convert .can syntax to JavaScript
  */
 export async function transpile(content: string, plugins: CompilerPlugin[] = [], filename: string = 'anonymous.can'): Promise<{ code: string; map?: string }> {
-    const allPlugins = [ 
+    // Define base mandatory plugins
+    const basePlugins = [ 
         cOncePlugin,
         cSlotPlugin,
-        cShowPlugin, // Use the new cShowPlugin
-        buttonClassPlugin, 
-        cIfPlugin, 
-        cForPlugin, 
-        cBindPlugin, 
-        cModelPlugin, 
+        buttonClassPlugin,
         cPortalPlugin,
-        cValidatePlugin,
-        ...plugins
+        cValidatePlugin
     ];
+
+    // Combine with passed plugins, ensuring no duplicates by checking plugin references
+    const allPlugins = [...basePlugins];
+    for (const plugin of plugins) {
+        if (!allPlugins.includes(plugin)) {
+            allPlugins.push(plugin);
+        }
+    }
+
     // 0. Run Plugin Transforms (Pre)
     for (const plugin of allPlugins) {
         if (plugin.transform) {

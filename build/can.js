@@ -1275,7 +1275,8 @@ function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e 
  * createMatcher: Compiles route paths into Regular Expressions 
  * to support dynamic parameters (e.g., /user/:id).
  */
-function createMatcher(routes) {
+function createMatcher() {
+  var routes = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : [];
   var compiledRoutes = routes.map(function (route) {
     var paramNames = [];
 
