@@ -54,9 +54,11 @@ export function create(projectName: string, templatesDir: string, frameworkVersi
                 const tsconfig = JSON.parse(fs.readFileSync(tsconfigPath, 'utf-8'));
                 if (isLocalDev) {
                     // Calculate relative path from new project to framework source
-                    const relativeSrc = path.relative(root, path.join(frameworkRoot, 'src', 'index.ts')).replace(/\\/g, '/');
+                    const relativeSrc = path.relative(root, path.join(frameworkRoot, 'src')).replace(/\\/g, '/');
+                    tsconfig.compilerOptions.baseUrl = ".";
                     tsconfig.compilerOptions.paths = {
-                        "@decaspace/can-framework": [relativeSrc]
+                        "@decaspace/can-framework": [`${relativeSrc}/index.ts`],
+                        "@decaspace/can-framework/*": [`${relativeSrc}/*`]
                     };
                     fs.writeFileSync(tsconfigPath, JSON.stringify(tsconfig, null, 2));
                 }

@@ -12,9 +12,9 @@ const __dirname = path.dirname(__filename);
  * It checks the project root (production) and the local directory (development).
  */
 const getTemplatesDir = () => {
-    const rootPath = path.resolve(__dirname, '../../templates');
-    const localPath = path.resolve(__dirname, 'templates');
-    return fs.existsSync(rootPath) ? rootPath : localPath;
+    const paths = [path.resolve(__dirname, '../../templates'), path.resolve(__dirname, 'templates')];
+    const existingPath = paths.find(p => fs.existsSync(p));
+    return existingPath || paths[0];
 };
 
 const TEMPLATES_DIR = getTemplatesDir();
@@ -34,6 +34,11 @@ async function run() {
 
     if (args.includes('--version') || args.includes('-v')) {
         console.log(`v${pkg.version}`);
+        return;
+    }
+
+    if (!command) {
+        showHelp();
         return;
     }
 
@@ -81,20 +86,29 @@ async function run() {
             const { disk } = await import('./disk');
             await disk();
             break;
+        case 'optimize':
+            const { optimize } = await import('../runtime-dom/optimize');
+            await optimize(args[1] || cwd);
+            break;
         default:
-            console.log('\n\x1b[32m@decaspace/can-framework CLI\x1b[0m');
-            console.log(`Version: ${pkg.version}`);
-            console.log('Usage: can <command> [arguments]\n');
-            console.log('Commands:');
-            console.log('  \x1b[36mcreate <name>\x1b[0m  Scaffold a new Can project');
-            console.log('  \x1b[36madd [type] <name>\x1b[0m Generate a new component (default) or api route');
-            console.log('  \x1b[36mbuild\x1b[0m          Build for production');
-            console.log('  \x1b[36mdev\x1b[0m            Start development server with HMR');
-            console.log('  \x1b[36mserve [port]\x1b[0m   Start development server with HMR (default: 3000)\n');
-            console.log('  \x1b[36mssg\x1b[0m            Generate static HTML files');
-            console.log('  \x1b[36mpreview [port]\x1b[0m Start production preview server (default: 3000)\n');
-            console.log('  \x1b[36mdisk\x1b[0m           Analyze project disk usage\n');
+            showHelp();
     }
+}
+
+function showHelp() {
+    console.log('\n\x1b[32m@decaspace/can-framework CLI\x1b[0m');
+    console.log(`Version: ${pkg.version}`);
+    console.log('Usage: can <command> [arguments]\n');
+    console.log('Commands:');
+    console.log('  \x1b[36mcreate <name>\x1b[0m  Scaffold a new Can project');
+    console.log('  \x1b[36madd [type] <name>\x1b[0m Generate a new component (default) or api route');
+    console.log('  \x1b[36mbuild\x1b[0m          Build for production');
+    console.log('  \x1b[36mdev\x1b[0m            Start development server with HMR');
+    console.log('  \x1b[36mserve [port]\x1b[0m   Start development server with HMR (default: 3000)\n');
+    console.log('  \x1b[36mssg\x1b[0m            Generate static HTML files');
+    console.log('  \x1b[36mpreview [port]\x1b[0m Start production preview server (default: 3000)\n');
+    console.log('  \x1b[36mdisk\x1b[0m           Analyze project disk usage');
+    console.log('  \x1b[36moptimize [dir]\x1b[0m Pre-compile template expressions for production\n');
 }
 
 run().catch(err => console.error('\x1b[31m[CLI Error]:\x1b[0m', err));

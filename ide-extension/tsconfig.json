@@ -1,0 +1,27 @@
+{
+    "compilerOptions": {
+        "module": "ESNext",
+        "target": "ES2022",
+        "lib": [
+            "ES2022",
+            "DOM",
+            "DOM.Iterable"
+        ],
+        "sourceMap": true,
+        "rootDir": "..",
+        "outDir": "out",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "moduleResolution": "bundler"
+    },
+    "include": [
+        "./extension.ts",
+        "./server.ts"
+    ],
+    "exclude": [
+        "node_modules",
+        "dist",
+        "**/*.test.ts"
+    ]
+}

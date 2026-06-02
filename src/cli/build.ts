@@ -17,15 +17,19 @@ import { cShowPlugin } from '../compiler/directives/c-show';
  * and handle example-specific path adjustments.
  */
 export function fixImports(code: string, fullPath: string): string {
-    // Strip shebangs (e.g., #!/usr/bin/env node) which cause SyntaxErrors in ESM (.mjs)
-    // especially if shifted off the first line during transpilation.
-    let fixed = code.replace(/^#!.*\n/, '');
+    // Strip shebangs WITHOUT removing the newline. This keeps line numbers aligned.
+    let fixed = code.replace(/^#!.*/, '');
 
     // 1. Handle standard imports/exports: import {x} from './y' or export {x} from './y'
-    fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.js|\.can|\.ts)?\2/g, "$1 $2$3.mjs$2");
+    // Added a check to prevent double .mjs extensions
+    fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.(?:js|can|ts))?\2/g, (match, p1, p2, p3) => {
+        return p3.endsWith('.mjs') ? match : `${p1} ${p2}${p3}.mjs${p2}`;
+    });
     
     // 2. Handle dynamic imports: import('./y')
-    fixed = fixed.replace(/import\((['"])(\..+?)(?:\.js|\.can|\.ts)?\1\)/g, "import($1$2.mjs$1)");
+    fixed = fixed.replace(/import\((['"])(\..+?)(?:\.(?:js|can|ts))?\1\)/g, (match, p1, p2) => {
+        return p2.endsWith('.mjs') ? match : `import(${p1}${p2}.mjs${p1})`;
+    });
 
     // Fix relative imports from examples pointing to src (since src is flattened in dist)
     if (fullPath.includes(path.sep + 'examples' + path.sep)) {
@@ -33,6 +37,51 @@ export function fixImports(code: string, fullPath: string): string {
     }
     return fixed;
 }
+
+/**
+ * Creates a TypeScript transformer that handles the fixImports logic 
+ * during the compilation phase, ensuring source maps stay perfectly aligned.
+ */
+function getTsTransformers(fullPath: string): ts.CustomTransformers {
+    const isExample = fullPath.includes(path.sep + 'examples' + path.sep);
+
+    const transformer = (context: ts.TransformationContext) => {
+        return (sourceFile: ts.SourceFile) => {
+            function visitor(node: ts.Node): ts.Node {
+                // Handle Import/Export declarations
+                if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
+                    if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+                        let specifier = node.moduleSpecifier.text;
+                        if (specifier.startsWith('.')) {
+                            // Apply example path fix
+                            if (isExample) {
+                                specifier = specifier.replace(/^\.\.\/(?:src\/)?([^/]+)\/([^/]+)$/, '../$2');
+                            }
+                            // Ensure .mjs extension
+                            if (!specifier.endsWith('.mjs')) {
+                                specifier = specifier.replace(/\.(js|ts|can)$/, '') + '.mjs';
+                            }
+                            
+                            const newSpecifier = ts.factory.createStringLiteral(specifier);
+                            if (ts.isImportDeclaration(node)) {
+                                return ts.factory.updateImportDeclaration(node, node.modifiers, node.importClause, newSpecifier, node.assertClause);
+                            } else {
+                                return ts.factory.updateExportDeclaration(node, node.modifiers, node.isTypeOnly, node.exportClause, newSpecifier, node.assertClause);
+                            }
+                        }
+                    }
+                }
+                return ts.visitEachChild(node, visitor, context);
+            }
+            return ts.visitNode(sourceFile, visitor) as ts.SourceFile;
+        };
+    };
+
+    return {
+        before: [transformer]
+    };
+}
+
 
 /**
  * Default plugins used by the framework transpiler
@@ -89,8 +138,9 @@ function countFiles(dir: string): number {
 function renderProgressBar(current: number, total: number, message: string) {
     const width = 25;
     const progress = total > 0 ? current / total : 1;
-    const filled = Math.round(width * progress);
-    const bar = '█'.repeat(filled) + '░'.repeat(width - filled);
+    const filled = Math.min(width, Math.max(0, Math.round(width * progress)));
+    const empty = Math.max(0, width - filled);
+    const bar = '█'.repeat(filled) + '░'.repeat(empty);
     const percent = Math.round(progress * 100);
     process.stdout.write(`\r\x1b[36m[Can Build]\x1b[0m [${bar}] ${percent}% | ${message.padEnd(30).slice(0, 30)}`);
 }
@@ -104,7 +154,8 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
     const stat = fs.statSync(fullPath);
     
     const isSource = (ext === '.can' || (ext === '.ts' && !file.endsWith('.d.ts')));
-    const outName = isSource ? path.basename(file, ext) + '.mjs' : file;
+    const outExt = isSource ? '.mjs' : ext;
+    const outName = path.basename(file, ext) + outExt;
 
     // Calculate output path
     const relativePath = path.relative(inputRoot, path.dirname(fullPath));
@@ -138,24 +189,36 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
     } else if (ext === '.ts' && !file.endsWith('.d.ts')) {
         const content = fs.readFileSync(fullPath, 'utf-8');
 
+        // Calculate relative path from the output directory back to the source file
+        // This ensures sourcemaps work regardless of where the project is installed.
+        const fileNameForTS = path.relative(outDir, fullPath);
+
+        // Use Custom Transformers to fix imports during transpilation.
+        // This keeps source maps aligned because TS tracks the changes internally.
         const transpiledOutput = ts.transpileModule(content, {
+            fileName: fileNameForTS,
+            transformers: getTsTransformers(fullPath),
             compilerOptions: {
                 target: ts.ScriptTarget.ES2020,
                 module: ts.ModuleKind.ESNext,
                 moduleResolution: ts.ModuleResolutionKind.NodeNext,
                 strict: true,
                 esModuleInterop: true,
-                skipLibCheck: false,
+                skipLibCheck: true,
                 noEmit: false,
                 noEmitOnError: true,
                 importHelpers: true,
                 jsx: ts.JsxEmit.None,
                 sourceMap: true,
-                inlineSources: false
+                inlineSources: false,
+                // Ensure shebangs don't cause issues by stripping them safely during parse
+                removeComments: false 
             }
         });
 
-        let processedCode = fixImports(transpiledOutput.outputText, fullPath);
+        // The output is already "fixed" by the transformer, but we still strip 
+        // the shebang if it exists without shifting line numbers.
+        let processedCode = transpiledOutput.outputText.replace(/^#!.*/, '');
 
         // Minification logic using esbuild
         if (shouldMinify) {
@@ -213,13 +276,8 @@ export async function build(targets?: string[], minify: boolean = false) {
 
     // Feature: clear-dist flag
     if (process.argv.includes('--clear') && fs.existsSync(distDir)) {
-        console.log('Clearing dist directory...');
-        // Preserve the CLI bundle so the build tool doesn't delete itself
-        const items = fs.readdirSync(distDir);
-        for (const item of items) {
-            if (item === 'index.mjs' || item === 'bundler' || item === 'cli') continue;
-            fs.rmSync(path.join(distDir, item), { recursive: true, force: true });
-        }
+        console.log('\x1b[33m[Build]\x1b[0m Purging dist directory for a clean source mirror...');
+        fs.rmSync(distDir, { recursive: true, force: true });
     }
 
     if (!fs.existsSync(distDir)) {
@@ -323,8 +381,12 @@ export async function build(targets?: string[], minify: boolean = false) {
 // Run if called directly
 const isMain = () => {
     if (typeof process === 'undefined' || !process.argv[1]) return false;
-    const entryPath = path.resolve(process.argv[1]);
-    return entryPath === fileURLToPath(import.meta.url);
+    try {
+        const entryPath = path.resolve(process.argv[1]);
+        return entryPath === fileURLToPath(import.meta.url);
+    } catch {
+        return false;
+    }
 };
 
 if (isMain()) {

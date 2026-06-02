@@ -20,6 +20,14 @@
   "main": "./dist/index.mjs",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
+  
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs"
+
+    }
+  },
   "files": [
     "dist",
     "src",
@@ -85,8 +93,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "can.showInfo",
-        "title": "Can: Show Extension Info"
+          "command": "can.showInfo",
+        "title": "Can: Show Info"
+      },
+      {
+        "command": "can.restartServer",
+        "title": "Can: Restart Language Server"
       }
     ],
     "languages": [

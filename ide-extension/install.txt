@@ -1,0 +1,18 @@
+
+. Install vsce
+You should install the vsce tool globally or use it via npx.
+npm install -g @vscode/vsce
+
+ Build and Package
+Open your terminal, navigate to the ide-extension directory, and run the packaging command.
+
+Note: The vsce tool will automatically run the vscode:prepublish script defined in your package.json, which executes npm run build to ensure your TypeScript is compiled into the out folder before packaging.
+
+Run this command inside c:\Users\HP\Documents\software\framework\ide-extension\:
+
+vsce package
+
+
+Installation: To test the new .vsix, you can drag and drop the newly generated can-framework-support-0.0.2.vsix into the VS Code Extensions view, or run:
+
+code --install-extension can-framework-support-0.0.2.vsix

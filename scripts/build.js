@@ -33,7 +33,11 @@ try {
 
     // Use tsx to run the CLI from source for internal builds. 
     // This avoids using a potentially broken dist/index.mjs to perform the build.
-    execSync(`npx tsx src/cli/index.ts build src api build --clear ${minifyFlag}`, { stdio: 'inherit' });
+    execSync(`npx tsx src/cli/index.ts build src api build examples --clear ${minifyFlag}`, { stdio: 'inherit' });
+
+    // 1.1 Generate Type Definitions (Required to match compile:all result)
+    console.log('\x1b[36m%s\x1b[0m', '>>> Generating type definitions...');
+    execSync('npx tsc --emitDeclarationOnly --declaration --declarationMap --rootDir src --outDir dist', { stdio: 'inherit' });
 
     // 2. Always ensure a fresh CLI compilation for the package distribution
     console.log('\x1b[36m%s\x1b[0m', '>>> Compiling CLI distribution bundle...');

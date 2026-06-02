@@ -1,40 +1,60 @@
-# Can Framework Language Support
+# Can Framework Support
 
-This extension provides rich language support for the **Can Framework**, specifically tailored for `.can` (Single File Component) files.
+![Can Framework Logo](icons/can.png)
 
-## 👤 About the Publisher
+Official Visual Studio Code support for the **Can Framework**. This extension provides a rich development experience for building reactive web applications using `.can` files.
 
-The Can Framework and its tooling are developed and maintained by **Endurance Ogun**, a software engineer dedicated to building high-performance, developer-centric web technologies. 
+## Features
 
-Endurance focuses on compiler-driven architectures and fine-grained reactivity to push the boundaries of modern web performance.
+### 🚀 Language Server Support (LSP)
+- **IntelliSense**: Smart code completion for framework keywords (`signal`, `computed`, `effect`), HTML tags within templates, and CSS properties in scoped styles.
+- **Hover Documentation**: Instantly view documentation for framework primitives by hovering over them.
+- **Go to Definition**: Navigate directly to imported components or class definitions using `F12` or `Ctrl+Click`.
+- **Real-time Diagnostics**: Immediate feedback on syntax errors and compiler warnings directly in the editor.
+- **Document Formatting**: Automatic code formatting and indentation for clean, consistent codebases.
 
-- **GitHub**: Diospace
-- **Project**: Can Framework
+### 🎨 Syntax Highlighting
+- High-performance colorization for Can-specific syntax, including the `component` block, reactive signals, and embedded HTML/CSS.
+- Support for `c-if`, `c-for`, `c-model`, and other framework directives.
 
-## ✨ Features
+### 📝 Snippets
+- `component-boilerplate`: Quickly scaffold a new Can component with template and reactive state.
 
-- **Syntax Highlighting**: Beautiful colorization for `.can` components, supporting embedded HTML templates and scoped CSS.
-- **Intelligent Snippets**: Quick scaffolding for components, signals, and lifecycle hooks.
-- **Completion Provider**: Smart suggestions for HTML tags inside templates and CSS properties in styles.
-- **Hover Information**: Detailed documentation on hover for framework-specific keywords like `component`, `signal`, and `template`.
-- **Document Formatting**: Keep your code clean with built-in formatting for `.can` files.
+## Usage
 
-## 📖 Usage
+1. Install the extension.
+2. Open any `.can` file.
+3. The Language Server will activate automatically, providing live feedback as you type.
 
-Simply open any file ending in `.can`. The extension will automatically activate and provide language features.
+## Commands
 
-### Snippets Included:
-- `component`: Creates a new Can Component skeleton.
-- `signal`: Inserts a reactive signal declaration.
-- `template`: Quickly adds a template string.
+This extension contributes the following commands to the Command Palette (`Ctrl+Shift+P`):
 
-## 🛠️ Commands
+- `Can: Show Info`: Displays status information about the Can Framework extension.
+- `Can: Restart Server`: Manually restarts the Language Server if needed.
 
-- **Can: Show Extension Info**: Verify that the extension is active and running.
+## Screenshots
 
-## 📝 Requirements
+### Syntax Highlighting & IntelliSense
+![IntelliSense Demo](images/screenshot1.png)
 
-This extension works best when used with the Can Framework project structure.
+## Requirements
 
----
-**Built with ❤️ by Endurance Ogun for the Can Framework Community.**
+- **Node.js**: Required to run the Language Server.
+- **Can Framework**: This extension is designed to work with projects using the Can Framework ecosystem.
+
+## Known Issues
+
+- Snippet performance may vary based on the complexity of the workspace.
+- CSS completion is currently limited to standard property names.
+
+## Release Notes
+
+### 0.0.2
+- Added full Language Server Protocol (LSP) integration.
+- Implemented Go to Definition for components.
+- Added automatic document formatting.
+- Improved syntax highlighting for reactive signals (`@` prefix).
+
+### 0.0.1
+- Initial release with basic syntax highlighting and snippets.

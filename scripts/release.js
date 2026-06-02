@@ -14,13 +14,18 @@ const __dirname = path.dirname(__filename);
  * Handles the production release sequence.
  */
 async function release() {
-    console.log('\x1b[33m%s\x1b[0m', '>>> Preparing for release...');
+    const pkgPath = path.resolve(__dirname, '../package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+    const isDryRun = process.argv.includes('--dry-run');
+    const isForce = process.argv.includes('--force');
+
+    console.log('\x1b[33m%s\x1b[0m', `>>> Preparing for release of ${pkg.name} v${pkg.version}...`);
 
     try {
         // 0. Check authentication before starting
         try {
             const user = execSync('npm whoami', { stdio: 'pipe' }).toString().trim();
-            console.log(`\x1b[36mLogged in as: ${user}\x1b[0m`);
+            console.log(`\x1b[36mNPM Account: ${user}\x1b[0m`);
         } catch (e) {
             console.error('\x1b[31m%s\x1b[0m', 'Error: You are not logged into npm. Please run "npm login" first.');
             process.exit(1);
@@ -28,7 +33,6 @@ async function release() {
 
         
         // 0. Safety Check: Ensure we are on the main branch
-        const isForce = process.argv.includes('--force');
         const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
         if (branch !== 'main' && !isForce) {
             console.error('\x1b[31m%s\x1b[0m', `Error: You are on branch "${branch}". Releases should only be made from "main".`);
@@ -47,7 +51,7 @@ async function release() {
 
         // 2. Run a full clean build (Core, CLI Bundle, and CDN)
         console.log('--- Step 1: Compiling core library and CLI...');
-        execSync('npm run build', { 
+        execSync('npm run build -- --clear', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
@@ -55,18 +59,22 @@ async function release() {
         // 2.1 Generate Type Definitions
         // The build script already handled transpilation, so we only need tsc for .d.ts files.
         console.log('--- Step 2: Generating type definitions...');
-        execSync('npx tsc --emitDeclarationOnly', { stdio: 'inherit' });
+        execSync('npx tsc --emitDeclarationOnly --declaration --declarationMap --rootDir src --outDir dist', { stdio: 'inherit' });
 
-        // 3. Placeholder for tests
-        // execSync('npm test', { stdio: 'inherit' });
+        // 3. Run tests
+        console.log('--- Step 3: Running test suite...');
+        execSync('npm test', { stdio: 'inherit' });
+
+        if (isDryRun) {
+            console.log('\x1b[32m%s\x1b[0m', '>>> Dry run complete. No changes were published or pushed.');
+            return;
+        }
 
         // 4. Final Publish
         console.log('--- Publishing to NPM...');
         execSync('npm publish --access public', { stdio: 'inherit' });
 
         // 5. Sync Git Tag
-        const pkgPath = path.resolve(__dirname, '../package.json');
-        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
         const tagName = `v${pkg.version}`;
         
         console.log(`--- Syncing Git tag ${tagName}...`);
@@ -82,7 +90,7 @@ async function release() {
          // 6. Push changes to trigger GitHub Actions
         console.log('--- Pushing to GitHub...');
         execSync(`git push origin main`, { stdio: 'inherit' });
-        execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
+        execSync(`git push origin ${tagName} --tags`, { stdio: 'inherit' });
 
     
 

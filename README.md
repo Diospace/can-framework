@@ -111,3 +111,16 @@ npm version patch
 
 # 4. Run the release script (this handles building, publishing to NPM, and pushing to GitHub)
 npm run release
+
+
+
+
+# Stage the optimized build logic and package configuration
+git add .
+
+# Commit with a descriptive message
+git commit -m "refactor: improve CLI build logic, support multiple targets, and optimize package distribution"
+
+# If you are ready to publish the new version (1.1.1 or 1.1.2)
+npm run release
+

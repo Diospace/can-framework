@@ -6,16 +6,23 @@ component About {
     // Library Demo: Signals
     var activeTab = signal('signals');
 
+    // Added count for the Signals demo area
+    var count = signal(0);
+
     // Library Demo: Draggable
     var dragRef = signal(null);
     var { x, y, isDragging } = useDraggable(this.dragRef);
+    
 
     var template = `
+        
         <div class="can about">
+
             <header>
                 <h2>Can Signal Framework</h2>
                 <p class="subtitle">A robust Javascript Frontend Framework by <b>Endurance ISeguan Ogun</b></p>
-            </header>
+            
+                </header>
 
             <div class="content-grid">
                 <section class="info">
@@ -38,7 +45,10 @@ component About {
 
                     <div class="lib-card" style="display: {{activeTab.value == 'signals' ? 'block' : 'none'}}">
                         <h4>Reactive Signals</h4>
-                        <div class="demo-area"> <!-- Removed count demo as it's not defined in this component -->
+                        <div class="demo-area">
+                            <button type="button" onclick="() => this.count.value++">Increment</button>
+                            <span class="badge">Value: {{ count.value }}</span>
+                            <button type="button" onclick="() => this.count.value--">Decrement</button>
                         </div>
                     </div>
 

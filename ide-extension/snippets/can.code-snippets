@@ -1,338 +1,206 @@
+
 {
-	"New Component": {
+	"Can Component": {
 		"prefix": "component",
 		"body": [
-			"component ${1:Name} {",
+			"component ${1:MyComponent} {",
+			"\tvar props = [",
+			"\t\t'${2:title}'",
+			"\t];",
+			"",
+			"\tvar ${3:count} = signal(0);",
+			"",
+			"\tfunction increment() {",
+			"\t\tthis.${3:count}.value++;",
+			"\t}",
+			"",
 			"\tvar template = `",
-			"\t\t<div class=\"${2:container}\">",
-			"\t\t\t$0",
+			"\t\t<div class=\"${1:MyComponent}\" @click=\"increment\">",
+			"\t\t\t<h1>${1:MyComponent}</h1>",
+			"\t\t\t<p>Count: {{${3:count}}}</p>",
+			"\t\t\t<slot></slot>",
 			"\t\t</div>",
 			"\t`;",
+			"}",
 			"",
-			"\t<style scoped>",
-			"\t\t.$2 {",
-			"\t\t\t",
-			"\t\t}",
-			"\t</style>",
-			"}"
-		],
-		"description": "Create a new Can component structure"
-	},
-	"Reactive Signal": {
-		"prefix": "signal",
-		"body": [
-			"var ${1:name} = signal(${2:initialValue});"
-		],
-		"description": "Create a reactive signal"
-	},
-	"Template Property": {
-		"prefix": "template",
-		"body": [
-			"var template = `",
-			"\t$0",
-			"`;"
-		],
-		"description": "Define the component template"
-	},
-	"Scoped Style": {
-		"prefix": "style",
-		"body": [
 			"<style scoped>",
+			".${1:MyComponent} {",
 			"\t$0",
+			"}",
 			"</style>"
 		],
-		"description": "Add scoped CSS styles"
+		"description": "Create a new Can Component skeleton"
+
 	},
-	"Console Log": {
-		"prefix": "log",
+	"Can Create Store": {
+		"prefix": "createStore",
 		"body": [
-			"console.log($1);"
-		],
-		"description": "Log to console"
-	},
-	"Template Loop": {
-		"prefix": "loop",
-		"body": [
-			"\\${${1:list}.map(${2:item} => `",
-			"\t$0",
-			"`).join('')}"
-		],
-		"description": "Render a list in the template"
-	},
-	"If/Else Statement": {
-		"prefix": "ifelse",
-		"body": [
-			"if (${1:condition}) {",
-			"\t$2",
-			"} else {",
-			"\t$0",
-			"}"
-		],
-		"description": "If/Else block"
-	},
-	"Try/Catch Block": {
-		"prefix": "trycatch",
-		"body": [
-			"try {",
-			"\t$1",
-			"} catch (${2:error}) {",
-			"\t$0",
-			"}"
-		],
-		"description": "Try/Catch block"
-	},
-	"Async Function": {
-		"prefix": "async",
-		"body": [
-			"async function ${1:name}(${2:params}) {",
-			"\t$0",
-			"}"
-		],
-		"description": "Async function definition"
-	},
-	"Switch Statement": {
-		"prefix": "switch",
-		"body": [
-			"switch (${1:key}) {",
-			"\tcase ${2:value}:",
-			"\t\t$0",
-			"\t\tbreak;",
-			"\tdefault:",
-			"\t\tbreak;",
-			"}"
-		],
-		"description": "Switch statement"
-	},
-	"While Loop": {
-		"prefix": "while",
-		"body": [
-			"while (${1:condition}) {",
-			"\t$0",
-			"}"
-		],
-		"description": "While loop"
-	},
-	"For Loop": {
-		"prefix": "for",
-		"body": [
-			"for (let ${1:i} = 0; $1 < ${2:array}.length; $1++) {",
-			"\tconst ${3:element} = $2[$1];",
-			"\t$0",
-			"}"
-		],
-		"description": "For loop"
-	},
-	"Class Definition": {
-		"prefix": "class",
-		"body": [
-			"class ${1:Name} {",
-			"\tconstructor(${2:params}) {",
-			"\t\t$0",
+			"const ${1:store} = createStore({",
+			"\tstate: () => ({",
+			"\t\t${2:count}: 0",
+			"\t}),",
+			"\tmutations: {",
+			"\t\t${3:increment}(state) {",
+			"\t\t\tstate.${2:count}++;",
+			"\t\t}",
+			"\t},",
+			"\tactions: {",
+			"\t\tasync ${4:asyncIncrement}({ commit }) {",
+			"\t\t\tawait new Promise(r => setTimeout(r, 1000));",
+			"\t\t\tcommit('${3:increment}');",
+			"\t\t}",
 			"\t}",
+			"});"
+		],
+		"description": "Scaffold a new Can Store"
+	},
+	"Can Use Store": {
+		"prefix": "useStore",
+		"body": [
+			"const store = useStore();"
+		],
+		"description": "Access the global store instance"
+	},
+	"Can Create Router": {
+		"prefix": "createRouter",
+		"body": [
+			"const router = createRouter({",
+			"\troutes: [",
+			"\t\t{ path: '/', component: ${1:Home} },",
+			"\t\t{ path: '/${2:about}', component: ${3:About} }",
+			"\t]",
+			"});"
+		],
+		"description": "Scaffold a new Can Router"
+	},
+	"Can Use Router": {
+		"prefix": "useRouter",
+		"body": [
+			"const router = useRouter();"
+		],
+		"description": "Access the router instance"
+	},
+	"Directive: c-if": {
+		"prefix": "cif",
+		"body": [
+			"<div c-if=\"${1:condition}\">",
+			"\t$0",
+			"</div>"
+		],
+		"description": "Template if directive"
+	},
+	"Directive: c-for": {
+		"prefix": "cfor",
+		"body": [
+			"<div c-for=\"${1:item} in ${2:items}\">",
+			"\t{{${1:item}}}",
+			"</div>"
+		],
+		"description": "Template for loop directive"
+	},
+	"Directive: c-model": {
+		"prefix": "cmodel",
+		"body": [
+			"<input c-model=\"${1:state}\" />"
+		],
+		"description": "Two-way data binding"
+	},
+	"Directive: c-show": {
+		"prefix": "cshow",
+		"body": [
+			"<div c-show=\"${1:condition}\">",
+			"\t$0",
+			"</div>"
+		],
+		"description": "Template show directive (toggles display)"
+	},
+	"Can Lifecycle onUnmounted": {
+		"prefix": "onUnmounted",
+		"body": [
+			"function onUnmounted() {",
+			"\t$0",
 			"}"
 		],
-		"description": "Class definition"
+		"description": "onUnmounted lifecycle hook"
 	},
-	"Import Statement": {
-		"prefix": "import",
+	"Can Log Signal": {
+		"prefix": "logSignal",
 		"body": [
-			"import { ${1:module} } from '${2:path}';"
+			"effect(() => console.log('${1:value}:', ${1:value}));"
 		],
-		"description": "Import statement"
+		"description": "Debug a signal using an effect"
 	},
-	"Export Statement": {
-		"prefix": "export",
+	"Composable: useFetch": {
+		"prefix": "useFetch",
 		"body": [
-			"export const ${1:name} = ${2:value};"
+			"const { data, error, isFetching, execute } = useFetch('${1:url}');"
 		],
-		"description": "Export statement"
+		"description": "Reactive fetch composable"
 	},
-	"Return Statement": {
-		"prefix": "return",
+	"Composable: useLocalStorage": {
+		"prefix": "useLocalStorage",
 		"body": [
-			"return $0;"
+			"const ${1:state} = useLocalStorage('${2:key}', ${3:defaultValue});"
 		],
-		"description": "Return statement"
+		"description": "Persist state in localStorage"
 	},
-	"Throw Statement": {
-		"prefix": "throw",
+	"Composable: useToggle": {
+		"prefix": "useToggle",
 		"body": [
-			"throw new Error('${1:message}');"
+			"const [${1:value}, toggle${1/(.*)/${1:/capitalize}/}] = useToggle(${2:false});"
 		],
-		"description": "Throw an error"
+		"description": "A boolean toggle hook"
 	},
-	"Debugger Statement": {
-		"prefix": "debugger",
+	"Composable: useEventListener": {
+		"prefix": "useEventListener",
 		"body": [
-			"debugger;"
-		],
-		"description": "Debugger statement"
-	},
-	"SetTimeout Function": {
-		"prefix": "setTimeout",
-		"body": [
-			"setTimeout(() => {",
-			"\t$0",
-			"}, ${1:1000});"
-		],
-		"description": "SetTimeout function"
-	},
-	"SetInterval Function": {
-		"prefix": "setInterval",
-		"body": [
-			"setInterval(() => {",
-			"\t$0",
-			"}, ${1:1000});"
-		],
-		"description": "SetInterval function"
-	},
-	"JSON Stringify": {
-		"prefix": "json",
-		"body": [
-			"JSON.stringify(${1:value}, null, 2);"
-		],
-		"description": "JSON stringify with formatting"
-	},
-	"JSON Parse": {
-		"prefix": "jsonparse",
-		"body": [
-			"JSON.parse(${1:value});"
-		],
-		"description": "JSON parse"
-	},
-	"Get Element By ID": {
-		"prefix": "getid",
-		"body": [
-			"document.getElementById('${1:id}');"
-		],
-		"description": "Get element by ID"
-	},
-	"Query Selector": {
-		"prefix": "query",
-		"body": [
-			"document.querySelector('${1:selector}');"
-		],
-		"description": "Query selector"
-	},
-	"Query Selector All": {
-		"prefix": "queryall",
-		"body": [
-			"document.querySelectorAll('${1:selector}');"
-		],
-		"description": "Query selector all"
-	},
-	"Add Event Listener": {
-		"prefix": "addevent",
-		"body": [
-			"${1:element}.addEventListener('${2:event}', (${3:e}) => {",
+			"useEventListener(${1:window}, '${2:click}', (e) => {",
 			"\t$0",
 			"});"
 		],
-		"description": "Add event listener"
+		"description": "Attach and automatically cleanup event listeners"
 	},
-	"Remove Event Listener": {
-		"prefix": "removeevent",
+	"Composable: useMediaQuery": {
+		"prefix": "useMediaQuery",
 		"body": [
-			"${1:element}.removeEventListener('${2:event}', ${3:handler});"
+			"const isLargeScreen = useMediaQuery('(min-width: ${1:1024}px)');"
 		],
-		"description": "Remove event listener"
+		"description": "Reactive media query"
 	},
-	"Fetch API": {
-		"prefix": "fetch",
+	"Composable: useAnimate": {
+		"prefix": "useAnimate",
 		"body": [
-			"fetch('${1:url}')",
-			"\t.then(response => response.json())",
-			"\t.then(data => {",
-			"\t\t$0",
-			"\t})",
-			"\t.catch(error => console.error('Error:', error));"
+			"const animation = useAnimate({",
+			"\ttargets: '${1:.el}',",
+			"\t${2:opacity}: [0, 1],",
+			"\tduration: ${3:1000},",
+			"\teasing: '${4:easeOutExpo}'",
+			"});"
 		],
-		"description": "Fetch API request"
+		"description": "Orchestrate animations with automatic cleanup"
 	},
-	"Local Storage Set": {
-		"prefix": "localset",
+	"Composable: useDebounce": {
+		"prefix": "useDebounce",
 		"body": [
-			"localStorage.setItem('${1:key}', ${2:value});"
+			"const ${1:debouncedValue} = useDebounce(${2:signal}, ${3:300});"
 		],
-		"description": "Set item in localStorage"
+		"description": "Debounce a reactive signal"
 	},
-	"Local Storage Get": {
-		"prefix": "localget",
+	"Composable: useInterval": {
+		"prefix": "useInterval",
 		"body": [
-			"localStorage.getItem('${1:key}');"
+			"useInterval(() => {",
+			"\t$0",
+			"}, ${1:1000});"
 		],
-		"description": "Get item from localStorage"
+		"description": "Safe interval that clears on unmount"
 	},
-	"Session Storage Set": {
-		"prefix": "sessionset",
+	"Composable: useAsyncState": {
+		"prefix": "useAsyncState",
 		"body": [
-			"sessionStorage.setItem('${1:key}', ${2:value});"
+			"const { state, isReady, isLoading, error } = useAsyncState(${1:promise}, ${2:initialState});"
 		],
-		"description": "Set item in sessionStorage"
-	},
-	"Session Storage Get": {
-		"prefix": "sessionget",
-		"body": [
-			"sessionStorage.getItem('${1:key}');"
-		],
-		"description": "Get item from sessionStorage"
-	},
-	"Console Error": {
-		"prefix": "error",
-		"body": [
-			"console.error($1);"
-		],
-		"description": "Log error to console"
-	},
-	"Console Warn": {
-		"prefix": "warn",
-		"body": [
-			"console.warn($1);"
-		],
-		"description": "Log warning to console"
-	},
-	"Console Info": {
-		"prefix": "info",
-		"body": [
-			"console.info($1);"
-		],
-		"description": "Log info to console"
-	},
-	"Console Table": {
-		"prefix": "table",
-		"body": [
-			"console.table($1);"
-		],
-		"description": "Log table to console"
-	},
-	"Console Group": {
-		"prefix": "group",
-		"body": [
-			"console.group('${1:label}');",
-			"$0",
-			"console.groupEnd();"
-		],
-		"description": "Group console logs"
-	},
-	"Console Time": {
-		"prefix": "time",
-		"body": [
-			"console.time('${1:label}');"
-		],
-		"description": "Start a timer"
-	},
-	"Console Time End": {
-		"prefix": "timeEnd",
-		"body": [
-			"console.timeEnd('${1:label}');"
-		],
-		"description": "End a timer"
-	},
-	"Console Clear": {
-		"prefix": "clear",
-		"body": [
-			"console.clear();"
-		],
-		"description": "Clear console"
+		"description": "Handle async state with signals"
 	}
 }
+

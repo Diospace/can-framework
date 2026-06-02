@@ -11,6 +11,18 @@
 		{ "include": "#strings" }
 	],
 	"repository": {
+		"directives": {
+			"patterns": [
+				{
+					"match": "\\b(c-if|c-for|c-model|c-show|c-bind|c-text|c-html|c-once)\\b",
+					"name": "keyword.control.directive.can"
+				},
+				{
+					"match": "(@|:|#)[a-zA-Z0-9-]+",
+					"name": "entity.other.attribute-name.directive.can"
+				}
+			]
+		},
 		"component": {
 			"begin": "\\b(component)\\s+([A-Za-z0-9_]+)\\s*\\{",
 			"beginCaptures": {
@@ -53,8 +65,12 @@
 					"name": "storage.type.can"
 				},
 				{
-					"match": "\\b(component|signal)\\b",
+					"match": "\\b(component)\\b",
 					"name": "keyword.other.can"
+				},
+				{
+					"match": "\\b(signal|computed|effect)\\b",
+					"name": "support.function.reactive.can"
 				},
 				{
 					"match": "\\b(function)\\s+([a-zA-Z0-9_]+)",
@@ -70,12 +86,18 @@
 			]
 		},
 		"variables": {
-			"begin": "\\b(var|let|const)\\b",
-			"beginCaptures": {
-				"1": { "name": "storage.type.can" }
-			},
-			"end": "(;)",
 			"patterns": [
+				{
+					"match": "@[a-zA-Z0-9_$]+",
+					"name": "variable.other.property.force-transform.can"
+				},
+				{
+					"begin": "\\b(var|let|const)\\b",
+					"beginCaptures": {
+						"1": { "name": "storage.type.can" }
+					},
+					"end": "(;|$)"
+				},
 				{ "include": "#keywords" },
 				{ "include": "source.js" }
 			]
@@ -127,6 +149,7 @@
 			"patterns": [
 				{ "include": "#template-expression" },
 				{ "include": "#interpolation" },
+				{ "include": "#directives" },
 				{ "include": "text.html.basic" }
 			]
 		},

@@ -9,12 +9,14 @@ import { cModel } from '../../src/runtime-core/directives/cModelRuntime';
 import { cHtml } from '../../src/runtime-core/directives/html';
 import { cValidate } from '../../src/runtime-core/directives/cValidateRuntime';
 import { useTransition, cAnimate } from '../../src/runtime-core/animation';
-import { LifecycleHooks, setCurrentInstance } from '../../src/runtime-core/apiLifecycle';
+import { LifecycleHooks, setCurrentInstance, onUnmounted } from '../../src/runtime-core/apiLifecycle';
 import { t as translate } from '../../src/runtime-core/i18n';
 import { nextTick } from '../../src/runtime-core/scheduler';
 import { devtools, DevToolsEvents } from '../../src/devtools';
 import { warn } from '../../src/shared';
-
+import { Suspense } from '../../src/runtime-core/Suspense';
+import { Teleport } from '../../src/runtime-core/Teleport';
+import { inject } from '../../src/runtime-core/apiInject';
 
 /**
  * Global registry for components defined via createApp().component()
@@ -26,6 +28,10 @@ const globalComponents = new Map<string, any>();
  */
 const globalDirectives = new Map<string, any>();
 
+// Register built-in components by default
+globalComponents.set('suspense', Suspense);
+globalComponents.set('teleport', Teleport);
+
 /**
  * Cache for compiled expressions to avoid the overhead of `new Function`
  */
@@ -34,13 +40,13 @@ const evalCache = new Map<string, Function>();
 /**
  * Crawls the DOM and applies framework logic to elements.
  */
-export function compileDOM(root: HTMLElement, scope: any) {
+export function compileDOM(root: HTMLElement, scope: any, hydrating = false) {
     const walk = (node: Node) => {
         if (node.nodeType === 3) { // Text Node
             handleTextNode(node, scope);
         } else if (node.nodeType === 1) { // Element Node
             const el = node as HTMLElement;
-            const continueWalking = handleElement(el, scope);
+            const continueWalking = handleElement(el, scope, hydrating);
             if (continueWalking) {
                 let child = el.firstChild;
                 while (child) {
@@ -61,6 +67,7 @@ function handleTextNode(node: Node, scope: any) {
         const regex = scope._context?.delimitersRegex.value;
         if (!regex) return;
 
+        regex.lastIndex = 0; // Reset global regex state
         if (regex.test(originalText)) {
             node.textContent = originalText.replace(regex, (_, exp) => String(unref(evaluate(exp.trim(), scope)) ?? ''));
         } else {
@@ -74,11 +81,12 @@ function handleTextNode(node: Node, scope: any) {
 
 export interface ComponentDefinition {
     name?: string;
-    template: string;
+    template?: string;
     setup?: (props: any) => object;
     data?: () => object;
     props?: string[] | Record<string, any>;
     methods?: Record<string, Function>;
+    loader?: () => Promise<ComponentDefinition>;
     computed?: Record<string, () => any>;
     watch?: Record<string, (newVal: any, oldVal: any) => void>;
     beforeMount?: () => void;
@@ -87,28 +95,48 @@ export interface ComponentDefinition {
     unmounted?: () => void;
 }
 
-function handleElement(el: HTMLElement, scope: any): boolean {
+function handleElement(el: HTMLElement, scope: any, hydrating = false): boolean {
     // 1. Handle c-cloak: Remove immediately so content can show after initialization
     if (el.hasAttribute('c-cloak')) {
         el.removeAttribute('c-cloak');
     }
 
     // 2. Structural Directives (Highest Priority)
-    // These modify the DOM tree, so we stop standard walking if they are present.
     if (el.hasAttribute('c-for')) {
-        handleCFor(el, scope);
-        return false; // Stop walking; cFor handles its own children
+        handleCFor(el, scope, hydrating);
+        return false; 
     }
 
     if (el.hasAttribute('c-if')) {
-        handleCIf(el, scope);
-        return false; // Stop walking; cIf handles its own children
+        handleCIf(el, scope, hydrating);
+        return false; 
     }
 
     // 3. Global Components (if registered)
     const tagName = el.tagName.toLowerCase();
-    if (globalComponents.has(tagName)) {
-        const compDef = globalComponents.get(tagName)!;
+    let compDef = globalComponents.get(tagName) as any;
+
+    if (compDef) {
+        // Support for Class-based components (CanElement)
+        // If the definition is a class, we resolve its template and props from an instance or prototype.
+        let template = compDef.template;
+        let propsConfig = compDef.props;
+
+        if (!template && typeof compDef === 'function') {
+            try {
+                // Extract metadata from a temporary instance
+                const tempInstance = new compDef();
+                template = tempInstance.template || '';
+                propsConfig = propsConfig || compDef.observedAttributes || tempInstance.constructor.observedAttributes;
+                
+                // Cache the resolved metadata back onto the definition to avoid re-instantiation in future walks
+                compDef.template = template;
+                compDef.props = propsConfig;
+            } catch (e) {
+                warn(`[Compiler] Failed to resolve template for class component: ${tagName}`);
+            }
+        }
+
         const compScope = new EffectScope();
 
         let state: any;
@@ -145,30 +173,47 @@ function handleElement(el: HTMLElement, scope: any): boolean {
         
         setCurrentInstance(compInstance);
 
+        // Support for Async Components via defineAsyncComponent/loader
+        if (compDef.loader && typeof compDef.loader === 'function') {
+            const suspense = inject<any>('SUSPENSE');
+            suspense?.register();
+            
+            compDef.loader().then((resolvedDef: ComponentDefinition) => {
+                // Cache resolved definition and re-compile this node
+                globalComponents.set(tagName, resolvedDef);
+                el.innerHTML = '';
+                handleElement(el, scope);
+                suspense?.resolve();
+            }).catch((err: any) => {
+                warn(`[Suspense] Failed to load async component: ${tagName}`, err);
+                suspense?.resolve();
+            });
+            return false;
+        }
+
         // 1. Resolve Props
         const props: Record<string, any> = {};
-        if (compDef.props) {
-            const observed = Array.isArray(compDef.props) ? compDef.props : Object.keys(compDef.props as any);
+        if (propsConfig) {
+            const observed = Array.isArray(propsConfig) ? propsConfig : Object.keys(propsConfig as any);
             observed.forEach((key: string) => {
                 if (el.hasAttribute(key)) {
                     props[key] = el.getAttribute(key);
-                } else if (!Array.isArray(compDef.props) && (compDef.props as any)[key]?.default !== undefined) {
-                    props[key] = (compDef.props as any)[key].default;
+                } else if (!Array.isArray(propsConfig) && (propsConfig as any)[key]?.default !== undefined) {
+                    props[key] = (propsConfig as any)[key].default;
                 }
             });
         }
 
+        const reactiveProps = reactive(props);
+
         // 2. Initialize Data and Setup
         const rawData = {
-            ...props,
+            ...reactiveProps,
             ...(compDef.data ? compDef.data.call(compInstance) : {}),
-            ...(compDef.setup ? compDef.setup(props) : {})
+            ...(compDef.setup ? compDef.setup(reactiveProps) : {})
         };
 
         state = reactive(rawData);
-        // Note: The Proxy 'compInstance' already handles delegation to 'state' 
-        // via the get/set traps implemented below. We just need to store 'state' 
-        // in the closure or on the base instance.
         (baseInstance as any)._state = state; 
 
         compInstance.$emit = (event: string, detail?: any) => {
@@ -229,9 +274,6 @@ function handleElement(el: HTMLElement, scope: any): boolean {
             if (compDef.unmounted) compDef.unmounted.call(compInstance);
         });
 
-        // Compile the component's template into the current element
-        let template = compDef.template;
-
         // Optimized Scoped Styles: Only process and inject once per component type
         if (template.includes('<style')) {
             if (!compDef._processed) {
@@ -258,13 +300,17 @@ function handleElement(el: HTMLElement, scope: any): boolean {
             if (compDef._scopeId) el.setAttribute(`data-v-${compDef._scopeId}`, '');
         }
 
+        // Save original light-dom children for distribution (e.g., inside Suspense)
+        const originalChildren = Array.from(el.childNodes);
         el.innerHTML = template;
+        // Re-append children so the component's internal slot logic can handle them
+        originalChildren.forEach(child => el.appendChild(child));
 
         if (compDef.beforeMount) compDef.beforeMount.call(compInstance);
         setCurrentInstance(null);
         
         compScope.run(() => {
-            compileDOM(el, compInstance); // Recursively compile with component's scope
+            compileDOM(el, compInstance, hydrating); 
         });
 
         // Trigger mounted hook for the component
@@ -289,14 +335,14 @@ function handleElement(el: HTMLElement, scope: any): boolean {
     const attrs = Array.from(el.attributes);
     for (const { name, value } of attrs) {
         if (name.startsWith('c-') || name.startsWith(':') || name.startsWith('@')) {
-            applyDirective(el, name, value, scope);
+            applyDirective(el, name, value, scope, hydrating);
         }
     }
 
     return true;
 }
 
-function handleCIf(el: HTMLElement, scope: any) {
+function handleCIf(el: HTMLElement, scope: any, hydrating = false) {
     const exp = el.getAttribute('c-if')!;
     const transitionName = el.getAttribute('animate') || el.className.match(/animate-(\w+)/)?.[1];
     
@@ -304,12 +350,18 @@ function handleCIf(el: HTMLElement, scope: any) {
     el.removeAttribute('animate');
 
     const parent = el.parentElement!;
-    // Wrap evaluation in a signal-like interface for the cIf helper
     const condition = { get value() { return !!evaluate(exp, scope); }, __c_isRef: true }; // Mark as ref for cIf
     
+    let hydrationNode: HTMLElement | undefined = hydrating ? el : undefined;
+
     cIf(parent, condition, () => {
+        if (hydrationNode) {
+            const target = hydrationNode;
+            hydrationNode = undefined; // Use only once
+            compileDOM(target, scope, hydrating);
+            return target;
+        }
         const clone = el.cloneNode(true) as HTMLElement;
-        
         if (transitionName) {
             const transition = useTransition(clone, transitionName);
             // We need to wait for the next tick to ensure the element is in the DOM 
@@ -324,13 +376,14 @@ function handleCIf(el: HTMLElement, scope: any) {
             };
         }
 
-        compileDOM(clone, scope);
+        compileDOM(clone, scope, false);
         return clone;
     });
-    el.remove();
+    
+    if (!hydrating) el.remove();
 }
 
-function handleCFor(el: HTMLElement, scope: any) {
+function handleCFor(el: HTMLElement, scope: any, hydrating = false) {
     const exp = el.getAttribute('c-for')!;
     el.removeAttribute('c-for');
     const [alias, sourceExp] = exp.split(' in ').map(s => s.trim());
@@ -344,13 +397,13 @@ function handleCFor(el: HTMLElement, scope: any) {
         childScope.index = index;
 
         const clone = el.cloneNode(true) as HTMLElement;
-        compileDOM(clone, childScope);
+        compileDOM(clone, childScope, false); // Items generated after initial load aren't hydrated
         return clone;
     });
-    el.remove();
+    if (!hydrating) el.remove();
 }
 
-function applyDirective(el: HTMLElement, name: string, exp: string, scope: any) {
+function applyDirective(el: HTMLElement, name: string, exp: string, scope: any, hydrating = false) {
     // Shorthand expansion
     const directive = name.startsWith(':') ? `c-bind${name}` : 
                      name.startsWith('@') ? `c-on:${name.slice(1)}` : name;
@@ -459,6 +512,13 @@ function applyDirective(el: HTMLElement, name: string, exp: string, scope: any) 
  */
 function evaluate(exp: string, scope: any, locals: Record<string, any> = {}) {
     try {
+        const trimmedExp = exp.trim();
+        // 1. Check for Optimized (Pre-compiled) Expressions
+        const optimized = scope._context?.config.expressions?.[trimmedExp];
+        if (optimized && Object.keys(locals).length === 0) {
+            return unref(optimized(scope));
+        }
+
         // Cache key includes whether locals exist to prevent collisions
         const cacheKey = (Object.keys(locals).length > 0 ? 'L:' : 'S:') + exp;
         let fn = evalCache.get(cacheKey);
@@ -499,6 +559,7 @@ export function createApp(options: {
     updated?: () => void,
     unmounted?: () => void,
     filter?: () => void,
+    template?: string,
     store?: any
 }) { // Add ComponentDefinition to App interface
     const context = {
@@ -507,7 +568,8 @@ export function createApp(options: {
             errorHandler: null,
             warnHandler: null,
             globalProperties: {} as Record<string, any>,
-            delimiters: (options as any).delimiters || ['{{', '}}']
+            delimiters: (options as any).delimiters || ['{{', '}}'],
+            expressions: (options as any).expressions || {} // Pre-compiled map
         })
     };
 
@@ -523,7 +585,7 @@ export function createApp(options: {
         /**
          * Register a global component for use in templates.
          */
-        component(name: string, definition: ComponentDefinition) {
+        component(name: string, definition: ComponentDefinition | any) {
             globalComponents.set(name.toLowerCase(), definition);
             return this; // Allow chaining
         },
@@ -565,14 +627,44 @@ export function createApp(options: {
         },
 
         /**
+         * Hydrate the application from server-rendered HTML.
+         */
+        hydrate(selector: string | HTMLElement) {
+            const root = typeof selector === 'string' 
+                ? document.querySelector(selector) as HTMLElement 
+                : selector;
+            if (!root) return warn(`Hydration target ${selector} not found.`);
+            
+            const { instance } = this._init(root, true);
+            compileDOM(root, instance, true);
+            if (options.mounted) options.mounted.call(instance);
+            return instance;
+        },
+
+        /**
          * Mount the application to a DOM element.
          * Initializes state, binds methods, and starts the DOM compiler.
          */
-        mount(selector: string) {
-            const root = document.querySelector(selector) as HTMLElement;
+        mount(selector: string | HTMLElement) {
+            const root = typeof selector === 'string' 
+                ? document.querySelector(selector) as HTMLElement 
+                : selector;
             if (!root) {
                 warn(`Mount target ${selector} not found.`);
                 return;
+            }
+            const { instance } = this._init(root, false);
+            compileDOM(root, instance, false);
+            if (options.mounted) options.mounted.call(instance);
+            return instance;
+        },
+
+        _init(root: HTMLElement, hydrating = false) {
+            // Internal helper to share initialization logic between mount and hydrate
+
+            // If a template is provided in options, inject it into the root
+            if (!hydrating && (options as any).template) {
+                root.innerHTML = (options as any).template;
             }
 
             // Initialize a mock instance for lifecycle support
@@ -590,9 +682,6 @@ export function createApp(options: {
             // Add delimsRegex to context for handleTextNode
             (context as any).delimitersRegex = delimitersRegex;
 
-            // Set active instance so composables like useFetch can register cleanup hooks
-            setCurrentInstance(instance);
-
             // 1. Resolve props for the root component from attributes on the mount target
             const props = {};
             if (options.props) {
@@ -606,10 +695,12 @@ export function createApp(options: {
                 });
             }
 
+            const reactiveProps = reactive(props);
+
             const rawData = {
-                ...props,
+                ...reactiveProps,
                 ...(options.data ? options.data.call(instance) : {}), 
-                ...(options.setup ? options.setup(props) : {}),
+                ...(options.setup ? options.setup(reactiveProps) : {}),
                 $store: options.store, // Make store accessible via $store
                
             };
@@ -680,14 +771,6 @@ export function createApp(options: {
             // 5. Lifecycle Registration
             if (options.beforeMount) options.beforeMount.call(proxyInstance);
 
-            // 5. Compile DOM against the processed instance
-            setCurrentInstance(proxyInstance);
-            compileDOM(root, proxyInstance);
-            setCurrentInstance(null);
-
-            // 6. Trigger Lifecycle
-            if (options.mounted) options.mounted.call(proxyInstance);
-            
             if (options.updated) {
                 effect(() => {
                     // Force the effect to track all reactive properties in the state
@@ -696,10 +779,8 @@ export function createApp(options: {
                 });
             }
 
-            console.log('[Can] Application successfully mounted.');
-            
             return {
-                instance,
+                instance: proxyInstance,
                 unmount: () => {
                     if (instance[LifecycleHooks.UNMOUNTED]) {
                         instance[LifecycleHooks.UNMOUNTED].forEach((fn: Function) => fn());

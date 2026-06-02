@@ -1,0 +1,27 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run Extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "npm: watch" // Use watch to keep server.js updated during development
+        },
+        {
+            "name": "Attach to Language Server",
+            "type": "node",
+            "request": "attach",
+            "port": 6009, // This port should match the one your server listens on
+            "restart": true,
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ]
+        }
+    ]
+}

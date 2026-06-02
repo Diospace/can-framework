@@ -6,5 +6,8 @@
   },
   "fileExtensions": {
     "can": "_can_file"
+  },
+  "languageIds": {
+    "can": "_can_file"
   }
 }
