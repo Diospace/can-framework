@@ -11,10 +11,7 @@ component GameLoop {
     var floor = 260;
 
     // Game Loop
-   
-    function useFrame(delta){
-        super();
-       useFrame((delta) => {
+    useFrame((delta) => {
         // Apply gravity
         var newVel = this.velocity.value + this.gravity;
         var newY = this.y.value + newVel;
@@ -30,7 +27,6 @@ component GameLoop {
         this.velocity.value = newVel;
         this.y.value = newY;
     });
-    }
 
     function drop() {
         this.y.value = 0;
