@@ -188,8 +188,17 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
 
         // Minification logic using esbuild
         if (shouldMinify) {
-            const minified = transformSync(processedCode, { minify: true, loader: 'js', target: 'es2020' });
-            processedCode = minified.code;
+            try {
+                const minified = transformSync(processedCode, { minify: true, loader: 'js', target: 'es2020' });
+                processedCode = minified.code;
+            } catch (err: any) {
+                console.error(`\n\x1b[31m[Minify Error]\x1b[0m Failed to minify compiled output for ${file}.`);
+                if (err.errors && err.errors.length > 0) {
+                    const firstError = err.errors[0];
+                    console.error(`\x1b[33mReason:\x1b[0m ${firstError.text} at line ${firstError.location?.line}:${firstError.location?.column}`);
+                }
+                throw err;
+            }
         }
 
         saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');

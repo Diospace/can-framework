@@ -42,17 +42,30 @@ try {
     console.log('\x1b[36m%s\x1b[0m', `>>> Running CLI build for: ${targets.join(', ')}...`);
     execSync(`npx tsx src/cli/index.ts ${buildArgs.join(' ')}`, { stdio: 'inherit' });
 
-    // 1.1 Generate Type Definitions (Required to match compile:all result)
-    console.log('\x1b[36m%s\x1b[0m', '>>> Generating type definitions...');
-    execSync('npx tsc --emitDeclarationOnly --declaration --declarationMap --rootDir src --outDir dist', { stdio: 'inherit' });
+    // 2. Generate Type Definitions (Matches compile:all result)
+    // We omit --rootDir to allow tsc to find all source files defined in tsconfig.json
+    console.log('\x1b[36m%s\x1b[0m', '>>> Generating comprehensive type definitions...');
+    execSync('npx tsc --emitDeclarationOnly --outDir dist', { stdio: 'inherit' });
 
-    // 2. Always ensure a fresh CLI compilation for the package distribution
+    // 3. Always ensure a fresh CLI compilation for the package distribution
     console.log('\x1b[36m%s\x1b[0m', '>>> Compiling CLI distribution bundle...');
     execSync('npm run compile', { stdio: 'inherit' });
 
-    console.log('\x1b[36m%s\x1b[0m', '>>> Bundling CDN Runtime Compiler (Output: dist/cdn)...');
-    // Execute webpack with the appropriate mode
+    // 4. Bundling CDN Runtimes
+    console.log('\x1b[36m%s\x1b[0m', '>>> Bundling CDN Assets (Standard & Compatibility)...');
+    
+    // Build the Compatibility Bundle (dist/cdn/can.compat.min.js)
     execSync(`npx webpack --config webpack.config.cdn.cjs --mode ${webpackMode}`, { stdio: 'inherit' });
+    
+    // Build the Production Bundle (build/cdn/can.prod.min.js via config2)
+    execSync(`npx webpack --config webpack.config.cdn2.cjs --mode ${webpackMode}`, { stdio: 'inherit' });
+
+    // Run modern CDN builder if the script exists
+    const modernBuilder = path.resolve(__dirname, 'cdn/build-cdn.js');
+    if (fs.existsSync(modernBuilder)) {
+        console.log('\x1b[36m%s\x1b[0m', '>>> Building modern CDN distribution...');
+        execSync(`node ${modernBuilder}`, { stdio: 'inherit' });
+    }
 
     console.log('\x1b[32m%s\x1b[0m', '>>> Framework built successfully!');
 } catch (error) {

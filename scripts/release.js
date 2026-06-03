@@ -49,8 +49,8 @@ async function release() {
             process.exit(1);
         }
 
-        // 2. Run a full clean build (Core, CLI Bundle, and CDN)
-        console.log('--- Step 1: Compiling core library and CLI...');
+        // 2. Run a full clean build (Core, API, Examples, CLI Bundle, and CDN Assets)
+        console.log('--- Step 1: Compiling framework, API, examples, and CDN bundles...');
         execSync('npm run build -- --clear', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 

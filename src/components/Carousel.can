@@ -421,6 +421,19 @@ component Carousel {
         }
     }
 
+    function getSlideStyle(index) {
+        const isCurrent = index === this.currentIndex.value;
+        if (!isCurrent) return 'z-index: 0; visibility: hidden;';
+
+        const s = this.transitionState.value;
+        const zoom = s.scale * this.manualZoom.value;
+        const tilt = this.parallax.tilt.value;
+        const roll = this.parallax.roll.value;
+        const filter = this.isGrayscale.value ? 'grayscale(100%)' : 'none';
+
+        return `z-index: 2; opacity: ${s.opacity}; transform: translate(${s.left}px, ${s.top}px) scale(${zoom}) perspective(1000px) rotateX(${tilt}deg) rotateY(${roll}deg); filter: ${filter};`;
+    }
+
     var template = `
         <div class="vanilla-slider-container" c-ref="containerRef" 
              @mouseenter="onEnter" @mouseleave="onLeave">
@@ -437,9 +450,9 @@ component Carousel {
             </div>
 
             <!-- Slides -->
-            <div c-for="(slide, index) in slides" 
+            <div c-for="slide in slides" 
                  class="slide-wrapper"
-                 style="{{ index === currentIndex.value ? 'z-index: 2; opacity: ' + transitionState.value.opacity + '; transform: translate(' + transitionState.value.left + 'px, ' + transitionState.value.top + 'px) scale(' + (transitionState.value.scale * manualZoom.value) + ') perspective(1000px) rotateX(' + this.parallax.tilt.value + 'deg) rotateY(' + this.parallax.roll.value + 'deg); filter: ' + (isGrayscale.value ? 'grayscale(100%)' : 'none') + ';' : 'z-index: 0; visibility: hidden;' }}">
+                 style="{{ getSlideStyle(index) }}">
 
                 <!-- Loading Spinner -->
                 <div c-if="loadedSlides.value.has(index) && !finishedLoadingSlides.value.has(index)" class="spinner-overlay">
@@ -450,7 +463,7 @@ component Carousel {
                     src="{{ loadedSlides.value.has(index) ? ((webpSupported.value && slide.webpUrl) ? slide.webpUrl : slide.imageUrl) : '' }}" 
                     alt="{{slide.alt || ''}}"
                     title="{{slide.title || ''}}"
-                    class="vanilla-slider-image {{ (this.props.kenBurns && index === currentIndex.value && !isLocked.value) ? this.kenBurnsClasses.value[index] : '' }}"
+                    class="vanilla-slider-image {{ (props.kenBurns && index === currentIndex.value && !isLocked.value) ? kenBurnsClasses.value[index] : '' }}"
                     @click="() => this.openLink(slide)"
                     @load="() => this.markAsLoaded(index)"
                     @error="() => this.markAsLoaded(index)"
@@ -466,23 +479,23 @@ component Carousel {
             </div>
 
             <!-- Arrows -->
-            <div c-if="this.props.arrows" class="arrows-container" style="opacity: {{ (this.props.arrowsHide && !isHovered.value) ? 0 : 1 }}">
+            <div c-if="props.arrows" class="arrows-container" style="opacity: {{ (props.arrowsHide && !isHovered.value) ? 0 : 1 }}">
                 <span class="vanilla-slider-arrow left" @click="prev">&#10094;</span>
                 <span class="vanilla-slider-arrow right" @click="next">&#10095;</span>
             </div>
 
             <!-- Bullets -->
-            <div c-if="this.props.bullets" class="vanilla-slider-bullet-container" style="opacity: {{ (this.props.bulletsHide && !isHovered.value) ? 0 : 1 }}">
-                <span c-for="(slide, index) in slides" 
+            <div c-if="props.bullets" class="vanilla-slider-bullet-container" style="opacity: {{ (props.bulletsHide && !isHovered.value) ? 0 : 1 }}">
+                <span c-for="slide in slides" 
                       class="vanilla-slider-bullet"
-                      style="color: {{ index === currentIndex.value ? (this.props.bulletColor || 'red') : '#fff' }}"
+                      style="color: {{ index === currentIndex.value ? (props.bulletColor || 'red') : '#fff' }}"
                       @click="() => this.goTo(index)">
                     &bull;
                 </span>
             </div>
 
             <!-- Progress Bar -->
-            <div c-if="this.props.auto && this.props.progressBar && !this.autoPaused.value" 
+            <div c-if="props.auto && props.progressBar && !autoPaused.value" 
                  class="vanilla-slider-progress-bar-container">
                 <div class="vanilla-slider-progress-bar" style="width: {{ autoProgress.value }}%"></div>
             </div>
