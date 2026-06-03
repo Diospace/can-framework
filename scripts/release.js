@@ -49,15 +49,19 @@ async function release() {
             process.exit(1);
         }
 
-        // 2. Run a full clean build (Core, API, Examples, CLI Bundle, and CDN Assets)
-        console.log('--- Step 1: Compiling framework, API, examples, and CDN bundles...');
+        // 2. Run the comprehensive compilation
+        console.log('--- Step 1: Running full compilation (npm run compile:all)...');
+        execSync('npm run compile:all', { stdio: 'inherit' });
+
+        // 3. Run the distribution build process (Bundles and CLI)
+        console.log('--- Step 2: Generating distribution bundles and CDN assets...');
         execSync('npm run build -- --clear', { 
             stdio: 'inherit', 
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        // 2. Run tests (Step numbering shifted)
-        console.log('--- Step 2: Running test suite...');
+        // 4. Run tests
+        console.log('--- Step 3: Running test suite...');
         execSync('npm test', { stdio: 'inherit' });
 
         if (isDryRun) {
