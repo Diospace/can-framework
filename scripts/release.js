@@ -85,7 +85,7 @@ async function release() {
          // 6. Push changes to trigger GitHub Actions
         console.log('--- Pushing to GitHub...');
         execSync(`git push origin main`, { stdio: 'inherit' });
-        execSync(`git push origin ${tagName} --tags`, { stdio: 'inherit' });
+        execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
 
     
 
