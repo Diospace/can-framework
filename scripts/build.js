@@ -34,10 +34,12 @@ try {
 
     // Use tsx to run the CLI from source for internal builds. 
     // This avoids using a potentially broken dist/index.mjs to perform the build.
-    const buildArgs = ['build', 'src', 'api', 'build', 'examples'];
-    if (clearFlag) buildArgs.push(clearFlag);
-    if (minifyFlag) buildArgs.push(minifyFlag);
+    const targets = ['src', 'api', 'build', 'examples'];
+    const buildArgs = ['build', ...targets];
+    if (clearFlag) buildArgs.push('--clear');
+    if (minifyFlag) buildArgs.push('--minify');
 
+    console.log('\x1b[36m%s\x1b[0m', `>>> Running CLI build for: ${targets.join(', ')}...`);
     execSync(`npx tsx src/cli/index.ts ${buildArgs.join(' ')}`, { stdio: 'inherit' });
 
     // 1.1 Generate Type Definitions (Required to match compile:all result)
@@ -55,6 +57,10 @@ try {
     console.log('\x1b[32m%s\x1b[0m', '>>> Framework built successfully!');
 } catch (error) {
     console.error('\x1b[31m%s\x1b[0m', '>>> Build failed with the following error:');
-    console.error(error.message || error);
+    if (error.stderr) {
+        console.error(error.stderr.toString());
+    } else {
+        console.error(error.message || error);
+    }
     process.exit(1);
 }

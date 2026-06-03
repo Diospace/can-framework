@@ -288,8 +288,13 @@ export async function build(targets?: string[], minify: boolean = false) {
 
     // Feature: clear-dist flag
     if (process.argv.includes('--clear') && fs.existsSync(distDir)) {
-        console.log('\x1b[33m[Build]\x1b[0m Purging dist directory for a clean source mirror...');
-        fs.rmSync(distDir, { recursive: true, force: true });
+        try {
+            console.log('\x1b[33m[Build]\x1b[0m Purging dist directory for a clean source mirror...');
+            fs.rmSync(distDir, { recursive: true, force: true });
+        } catch (err: any) {
+            console.warn(`\x1b[33m[Build Warning]\x1b[0m Could not fully clear dist directory: ${err.message}`);
+            // Continue anyway, as individual file writes might still succeed or overwrite.
+        }
     }
 
     if (!fs.existsSync(distDir)) {
