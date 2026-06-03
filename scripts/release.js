@@ -56,13 +56,8 @@ async function release() {
             env: { ...process.env, NODE_ENV: 'production' } 
         });
 
-        // 2.1 Generate Type Definitions
-        // The build script already handled transpilation, so we only need tsc for .d.ts files.
-        console.log('--- Step 2: Generating type definitions...');
-        execSync('npx tsc --emitDeclarationOnly --declaration --declarationMap --rootDir src --outDir dist', { stdio: 'inherit' });
-
-        // 3. Run tests
-        console.log('--- Step 3: Running test suite...');
+        // 2. Run tests (Step numbering shifted)
+        console.log('--- Step 2: Running test suite...');
         execSync('npm test', { stdio: 'inherit' });
 
         if (isDryRun) {

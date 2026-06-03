@@ -30,10 +30,15 @@ try {
         process.argv.includes('--minify');
     const minifyFlag = isProd ? '--minify' : '';
     const webpackMode = isProd ? 'production' : 'development';
+    const clearFlag = process.argv.includes('--clear') ? '--clear' : '';
 
     // Use tsx to run the CLI from source for internal builds. 
     // This avoids using a potentially broken dist/index.mjs to perform the build.
-    execSync(`npx tsx src/cli/index.ts build src api build examples --clear ${minifyFlag}`, { stdio: 'inherit' });
+    const buildArgs = ['build', 'src', 'api', 'build', 'examples'];
+    if (clearFlag) buildArgs.push(clearFlag);
+    if (minifyFlag) buildArgs.push(minifyFlag);
+
+    execSync(`npx tsx src/cli/index.ts ${buildArgs.join(' ')}`, { stdio: 'inherit' });
 
     // 1.1 Generate Type Definitions (Required to match compile:all result)
     console.log('\x1b[36m%s\x1b[0m', '>>> Generating type definitions...');
@@ -49,5 +54,7 @@ try {
 
     console.log('\x1b[32m%s\x1b[0m', '>>> Framework built successfully!');
 } catch (error) {
+    console.error('\x1b[31m%s\x1b[0m', '>>> Build failed with the following error:');
+    console.error(error.message || error);
     process.exit(1);
 }
