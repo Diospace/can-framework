@@ -9,7 +9,8 @@
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/out/**/*.js",
+                 "${workspaceFolder}/out/*.js"
             ],
             "preLaunchTask": "npm: watch" // Use watch to keep server.js updated during development
         },
@@ -20,7 +21,8 @@
             "port": 6009, // This port should match the one your server listens on
             "restart": true,
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/out/**/*.js",
+                 "${workspaceFolder}/out/*.js"
             ]
         }
     ]

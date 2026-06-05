@@ -2,7 +2,7 @@
   "name": "can-language-support",
   "displayName": "Can Framework Official Tooling",
   "description": "Language support and themes for the Can Framework",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "publisher": "can-framework",
   "icon": "icons/can.png",
   "license": "MIT",

@@ -50,6 +50,26 @@ This extension contributes the following commands to the Command Palette (`Ctrl+
 
 ## Release Notes
 
+### 0.0.4
+- Added support for CSS property completion.
+- Improved snippet performance and stability.
+- Fixed an issue with snippet insertion when using the `Tab` key.
+
+### 0.0.3 
+- Added support for CSS property completion.
+- Improved snippet performance and stability.
+- Fixed an issue with snippet insertion when using the `Tab` key.
+
+### 0.0.2
+- Added full Language Server Protocol (LSP) integration.
+- Implemented Go
+
+### 0.0.3 
+- Added support for CSS property completion.
+- Improved snippet performance and stability.
+- Fixed an issue with snippet insertion when using the `Tab` key.
+
+
 ### 0.0.2
 - Added full Language Server Protocol (LSP) integration.
 - Implemented Go to Definition for components.

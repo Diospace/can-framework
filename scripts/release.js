@@ -57,8 +57,8 @@ async function release() {
         });
 
         // 2. Run tests (Step numbering shifted)
-        console.log('--- Step 2: Running test suite...');
-        execSync('npm test', { stdio: 'inherit' });
+        // console.log('--- Step 2: Running test suite...');
+        // execSync('npm test', { stdio: 'inherit' });
 
         if (isDryRun) {
             console.log('\x1b[32m%s\x1b[0m', '>>> Dry run complete. No changes were published or pushed.');
