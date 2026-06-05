@@ -6,15 +6,19 @@ component Dashboard {
     var route = useRoute();
     var title = useTitle("Dashboard | Can Framework");
     var { width, height } = useWindowSize();
+    
+    
 
     function navigate(path) {
         if (this.router) this.router.push(path);
     }
 
     var template = `
+        
         <div class="dashboard-layout">
             <aside class="sidebar">
                 <div class="logo">CanFW</div>
+                
                 <nav>
                     <a class="nav-item active">Overview</a>
                     <a class="nav-item" onclick="() => this.navigate('/')">Home</a>

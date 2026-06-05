@@ -179,24 +179,14 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         const { code } = await transpile(content, defaultPlugins, fullPath);
         let processedCode = fixImports(code, fullPath);
 
-        // TEMPORARY DEBUG LOG: Inspect the code before esbuild minification
-        if (path.basename(fullPath) === 'Carousel.can') {
-            console.log(`\n--- Processed Code for ${fullPath} (before esbuild) ---\n`);
-            console.log(processedCode);
-            console.log(`\n--- End Processed Code ---\n`);
-        }
 
-        // Minification logic using esbuild
-        if (shouldMinify) {
+
+          if (shouldMinify) {
             try {
                 const minified = transformSync(processedCode, { minify: true, loader: 'js', target: 'es2020' });
                 processedCode = minified.code;
-            } catch (err: any) {
+            } catch (err) {
                 console.error(`\n\x1b[31m[Minify Error]\x1b[0m Failed to minify compiled output for ${file}.`);
-                if (err.errors && err.errors.length > 0) {
-                    const firstError = err.errors[0];
-                    console.error(`\x1b[33mReason:\x1b[0m ${firstError.text} at line ${firstError.location?.line}:${firstError.location?.column}`);
-                }
                 throw err;
             }
         }

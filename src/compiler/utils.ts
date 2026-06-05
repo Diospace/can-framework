@@ -10,7 +10,11 @@ const BUILT_INS = new Set([
     'encodeURI', 'encodeURIComponent', 'eval', 'setTimeout', 'setInterval', 
     'clearTimeout', 'clearInterval', 'fetch', 'alert', 'confirm', 'prompt',
     'window', 'document', 'console', 'navigator', 'location', 'history', 'screen', 
-    'localStorage', 'sessionStorage', 'globalThis', 'NaN', 'Infinity', 'props'
+    'localStorage', 'sessionStorage', 'globalThis', 'NaN', 'Infinity', 'props',
+     'const', 'let', 'var', 'function', 'return', 'if', 'else', 'for', 'in', 'of', 
+    'while', 'do', 'break', 'continue', 'switch', 'case', 'default', 'try', 
+    'catch', 'finally', 'throw', 'class', 'extends', 'import', 'export', 
+    'from', 'static', 'get', 'set', 'async'
 ]);
 
 export function processExpression(expr: string, locals: string[]): string {

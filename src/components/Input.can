@@ -15,10 +15,12 @@ component Input {
     }
 
     var template = `
+      
         <div class="input-wrapper">
             <input class="styled-input" value="{{modelValue}}" placeholder="{{placeholder}}" oninput="onInput(event)" />
     
         </div>
+        
     `;
 }
 

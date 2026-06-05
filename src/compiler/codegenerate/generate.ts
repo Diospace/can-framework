@@ -25,9 +25,12 @@ export function genChildren(children: Node[], parentVar: string, startIndex: num
                 let first = true;
                 while (chainNode) {
                     const condition = chainNode.ifCondition;
-                    const condStr = condition ? processExpression(condition, locals) : 'true';
                     
-                    code += `  ${first ? '' : 'else '}if (${condStr}) {\n`;
+                    if (first) {
+                        code += `  if (${processExpression(condition!, locals)}) {\n`;
+                    } else {
+                        code += condition ? `  else if (${processExpression(condition, locals)}) {\n` : `  else {\n`;
+                    }
                     
                     const elVar = `el${idx++}`;
                     const res = genSingleNode(chainNode, elVar, idx, true, parentVar, locals, true, plugins); 
@@ -55,9 +58,12 @@ export function genChildren(children: Node[], parentVar: string, startIndex: num
                 
                 while (chainNode) {
                     const condition = chainNode.ifCondition;
-                    const condStr = condition ? processExpression(condition, locals) : 'true';
                     
-                    code += `  ${first ? '' : 'else '}if (${condStr}) {\n`;
+                    if (first) {
+                        code += `  if (${processExpression(condition!, locals)}) {\n`;
+                    } else {
+                        code += condition ? `  else if (${processExpression(condition, locals)}) {\n` : `  else {\n`;
+                    }
                     
                     const elVar = `el${idx++}`;
                     const res = genSingleNode(chainNode, elVar, idx, false, undefined, locals, false, plugins); 

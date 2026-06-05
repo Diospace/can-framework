@@ -47,7 +47,7 @@ export function activate(context: vscode.ExtensionContext) {
     // Register additional commands defined in package.json
     context.subscriptions.push(
         vscode.commands.registerCommand('can.showInfo', () => {
-            vscode.window.showInformationMessage('Can Framework Support is active with LSP enabled.');
+            vscode.window.showInformationMessage('Can Language Support is active with LSP enabled.');
         })
     );
 
@@ -60,6 +60,53 @@ export function activate(context: vscode.ExtensionContext) {
             }
         })
     );
+
+    // --- Auto-Close Tag Logic ---
+    vscode.workspace.onDidChangeTextDocument(event => {
+        const editor = vscode.window.activeTextEditor;
+        if (!editor || event.document.languageId !== 'can' || event.contentChanges.length !== 1) {
+            return;
+        }
+
+        const change = event.contentChanges[0];
+        // Only trigger when the user types '>'
+        if (change.text !== '>') {
+            return;
+        }
+
+        const position = change.range.start.translate(0, 1);
+        const lineText = editor.document.lineAt(position.line).text;
+        const textBefore = lineText.substring(0, position.character);
+
+        // Regex to find the opening tag name just before the cursor
+        const tagMatch = textBefore.match(/<([a-zA-Z][a-zA-Z0-9-]*)(?:\s+[^>]*?)?>$/);
+        if (!tagMatch) {
+            return;
+        }
+
+        const tagName = tagMatch[1];
+        const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+
+        // Don't close void elements (e.g., <img >)
+        if (voidElements.includes(tagName.toLowerCase())) {
+            return;
+        }
+
+        // Ensure we are inside a template block
+        const offset = editor.document.offsetAt(position);
+        const prefix = editor.document.getText().substring(0, offset);
+        if (!/template\s*=\s*`[^`]*$/.test(prefix)) {
+            return;
+        }
+
+        // Insert the closing tag
+        editor.edit(editBuilder => {
+            editBuilder.insert(position, `</${tagName}>`);
+        }, { undoStopBefore: false, undoStopAfter: false }).then(() => {
+            // Keep the cursor after the '>'
+            editor.selection = new vscode.Selection(position, position);
+        });
+    });
 }
 
 /**

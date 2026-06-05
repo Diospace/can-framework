@@ -49,19 +49,15 @@ async function release() {
             process.exit(1);
         }
 
-        // 2. Run the comprehensive compilation
-        console.log('--- Step 1: Running full compilation (npm run compile:all)...');
-        execSync('npm run compile:all', { stdio: 'inherit' });
-
-        // 3. Run the distribution build process (Bundles and CLI)
-        console.log('--- Step 2: Generating distribution bundles and CDN assets...');
+        // 2. Run the unified build process (Handles compile:all and CDN assets internally)
+        console.log('--- Step 1: Generating distribution build (non-minified)...');
         execSync('npm run build -- --clear', { 
             stdio: 'inherit', 
-            env: { ...process.env, NODE_ENV: 'production' } 
+            env: { ...process.env, NODE_ENV: 'development' } 
         });
 
-        // 4. Run tests
-        console.log('--- Step 3: Running test suite...');
+        // 2. Run tests (Step numbering shifted)
+        console.log('--- Step 2: Running test suite...');
         execSync('npm test', { stdio: 'inherit' });
 
         if (isDryRun) {

@@ -6,12 +6,14 @@ component About {
     // Library Demo: Signals
     var activeTab = signal('signals');
 
+
     // Added count for the Signals demo area
     var count = signal(0);
 
     // Library Demo: Draggable
     var dragRef = signal(null);
     var { x, y, isDragging } = useDraggable(this.dragRef);
+    
     
 
     var template = `
@@ -21,8 +23,9 @@ component About {
             <header>
                 <h2>Can Signal Framework</h2>
                 <p class="subtitle">A robust Javascript Frontend Framework by <b>Endurance ISeguan Ogun</b></p>
-            
+               
                 </header>
+            
 
             <div class="content-grid">
                 <section class="info">

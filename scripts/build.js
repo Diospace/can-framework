@@ -11,6 +11,11 @@ const __dirname = path.dirname(__filename);
  */
 console.log('\x1b[34m%s\x1b[0m', '>>> Starting Framework Build...');
 
+const isProd = process.env.NODE_ENV === 'production' || process.argv.includes('--minify');
+const webpackMode = isProd ? 'production' : 'development';
+const minifyFlag = isProd ? '--minify' : '';
+
+
 try {
     // 1. Ensure the CLI is compiled before attempting to run it or type-check.
     // const cliEntry = path.resolve(__dirname, '../dist/index.mjs');
@@ -23,44 +28,39 @@ try {
     console.log('\x1b[36m%s\x1b[0m', '>>> Running type check...');
     execSync('npm run type-check', { stdio: 'inherit' });
 
-    // Determine if we should minify based on environment variables
-    const isProd = 
-        process.env.NODE_ENV === 'production' || 
-        process.env.MINIFY === 'true' || 
-        process.argv.includes('--minify');
-    const minifyFlag = isProd ? '--minify' : '';
-    const webpackMode = isProd ? 'production' : 'development';
-    const clearFlag = process.argv.includes('--clear') ? '--clear' : '';
 
-    // Use tsx to run the CLI from source for internal builds. 
-    // This avoids using a potentially broken dist/index.mjs to perform the build.
-    const targets = ['src', 'api', 'build', 'examples'];
-    const buildArgs = ['build', ...targets];
-    if (clearFlag) buildArgs.push('--clear');
-    if (minifyFlag) buildArgs.push('--minify');
 
-    console.log('\x1b[36m%s\x1b[0m', `>>> Running CLI build for: ${targets.join(', ')}...`);
-    execSync(`npx tsx src/cli/index.ts ${buildArgs.join(' ')}`, { stdio: 'inherit' });
+    if (process.argv.includes('--clear')) {
+        const distPath = path.resolve(__dirname, '../dist');
+        if (fs.existsSync(distPath)) {
+            console.log('\x1b[33m%s\x1b[0m', '>>> Purging dist directory...');
+            fs.rmSync(distPath, { recursive: true, force: true });
+        }
+    }
 
-    // 2. Generate Type Definitions (Matches compile:all result)
-    // We omit --rootDir to allow tsc to find all source files defined in tsconfig.json
-    console.log('\x1b[36m%s\x1b[0m', '>>> Generating comprehensive type definitions...');
-    execSync('npx tsc --emitDeclarationOnly --outDir dist', { stdio: 'inherit' });
+    // 3. Run the comprehensive compilation (compile:all)
+    // This processes framework components (src, api, build, examples) and generates type definitions.
+    console.log('\x1b[36m%s\x1b[0m', '>>> Running full compilation (npm run compile:all)...');
+    // execSync('npm run compile:all', { stdio: 'inherit' });
+    execSync(`npm run compile:all -- ${minifyFlag}`, { stdio: 'inherit' });
 
-    // 3. Always ensure a fresh CLI compilation for the package distribution
+
+    // 4. Always ensure a fresh CLI compilation for the package distribution
     console.log('\x1b[36m%s\x1b[0m', '>>> Compiling CLI distribution bundle...');
-    execSync('npm run compile', { stdio: 'inherit' });
+    //execSync('npm run compile', { stdio: 'inherit' });
+    execSync(`npm run compile -- ${minifyFlag}`, { stdio: 'inherit' });
 
-    // 4. Bundling CDN Runtimes
+
+    // 5. Bundling CDN Runtimes (Forcing development mode to disable minification)
     console.log('\x1b[36m%s\x1b[0m', '>>> Bundling CDN Assets (Standard & Compatibility)...');
+    // execSync('npx webpack --config webpack.config.cdn.cjs --mode development', { stdio: 'inherit' });
+    // execSync('npx webpack --config webpack.config.cdn2.cjs --mode development', { stdio: 'inherit' });
     
-    // Build the Compatibility Bundle (dist/cdn/can.compat.min.js)
+    // 5. Bundling CDN Runtimes
     execSync(`npx webpack --config webpack.config.cdn.cjs --mode ${webpackMode}`, { stdio: 'inherit' });
-    
-    // Build the Production Bundle (build/cdn/can.prod.min.js via config2)
     execSync(`npx webpack --config webpack.config.cdn2.cjs --mode ${webpackMode}`, { stdio: 'inherit' });
 
-    // Run modern CDN builder if the script exists
+    
     const modernBuilder = path.resolve(__dirname, 'cdn/build-cdn.js');
     if (fs.existsSync(modernBuilder)) {
         console.log('\x1b[36m%s\x1b[0m', '>>> Building modern CDN distribution...');

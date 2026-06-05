@@ -11,7 +11,8 @@ component GameLoop {
     var floor = 260;
 
     // Game Loop
-    useFrame((delta) => {
+    // Assigning to a variable ensures the compiler treats this as a valid class field.
+    var loop = useFrame((delta) => {
         // Apply gravity
         var newVel = this.velocity.value + this.gravity;
         var newY = this.y.value + newVel;
@@ -38,7 +39,7 @@ component GameLoop {
             <div class="ball" style="transform: translateY({{y}}px)"></div>
             <div class="floor"></div>
             <div class="controls">
-                <button onclick="() => this.drop()">Drop Ball</button>
+                <button @click="drop">Drop Ball</button>
                 <span class="stats">Velocity: {{Math.round(velocity.value)}}</span>
             </div>
         </div>

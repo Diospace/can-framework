@@ -18114,9 +18114,9 @@ __export(extension_exports, {
   deactivate: () => deactivate
 });
 module.exports = __toCommonJS(extension_exports);
-var vscode = __toESM(require("vscode"), 1);
-var path = __toESM(require("path"), 1);
-var import_node = __toESM(require_node3(), 1);
+var vscode = __toESM(require("vscode"));
+var path = __toESM(require("path"));
+var import_node = __toESM(require_node3());
 var client;
 function activate(context) {
   console.log("Can Framework Language Support is now active!");
@@ -18144,7 +18144,7 @@ function activate(context) {
   });
   context.subscriptions.push(
     vscode.commands.registerCommand("can.showInfo", () => {
-      vscode.window.showInformationMessage("Can Framework Support is active with LSP enabled.");
+      vscode.window.showInformationMessage("Can Language Support is active with LSP enabled.");
     })
   );
   context.subscriptions.push(
@@ -18156,6 +18156,38 @@ function activate(context) {
       }
     })
   );
+  vscode.workspace.onDidChangeTextDocument((event) => {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor || event.document.languageId !== "can" || event.contentChanges.length !== 1) {
+      return;
+    }
+    const change = event.contentChanges[0];
+    if (change.text !== ">") {
+      return;
+    }
+    const position = change.range.start.translate(0, 1);
+    const lineText = editor.document.lineAt(position.line).text;
+    const textBefore = lineText.substring(0, position.character);
+    const tagMatch = textBefore.match(/<([a-zA-Z][a-zA-Z0-9-]*)(?:\s+[^>]*?)?>$/);
+    if (!tagMatch) {
+      return;
+    }
+    const tagName = tagMatch[1];
+    const voidElements = ["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "param", "source", "track", "wbr"];
+    if (voidElements.includes(tagName.toLowerCase())) {
+      return;
+    }
+    const offset = editor.document.offsetAt(position);
+    const prefix = editor.document.getText().substring(0, offset);
+    if (!/template\s*=\s*`[^`]*$/.test(prefix)) {
+      return;
+    }
+    editor.edit((editBuilder) => {
+      editBuilder.insert(position, `</${tagName}>`);
+    }, { undoStopBefore: false, undoStopAfter: false }).then(() => {
+      editor.selection = new vscode.Selection(position, position);
+    });
+  });
 }
 function deactivate() {
   if (!client) {

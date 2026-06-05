@@ -42,6 +42,7 @@ component AdvancedUI {
     });
 
     var template = `
+    
         <div class="advanced-ui-widget" style="display: {{isOpen.value ? 'block' : 'none'}}">
             <div class="panel" c-ref="panelRef" style="transform: translate({{x}}px, {{y}}px); width: {{width}}px; height: {{isMinimized.value ? 'auto' : height.value + 'px'}}">
                 <div class="panel-header" style="cursor: {{isDragging.value ? 'grabbing' : 'grab'}}">
@@ -56,6 +57,7 @@ component AdvancedUI {
                     <div class="virtual-container" style="height: {{totalHeight}}px">
                         <div c-for="item in visibleItems" class="virtual-item" style="{{item.style}}">
                             {{item.item}}
+                            
                         </div>
                         <div c-if="items.value.length === 0" class="empty-state">
                             No items to display

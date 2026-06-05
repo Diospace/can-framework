@@ -13,6 +13,19 @@ Run this command inside c:\Users\HP\Documents\software\framework\ide-extension\:
 vsce package
 
 
-Installation: To test the new .vsix, you can drag and drop the newly generated can-framework-support-0.0.2.vsix into the VS Code Extensions view, or run:
+Installation: To test the new .vsix, you can drag and drop the newly generated can-language-support-0.0.3.vsix into the VS Code Extensions view, or run:
 
-code --install-extension can-framework-support-0.0.2.vsix
+code --install-extension can-language-support-0.0.3.vsix
+
+
+
+
+
+# Navigate to the extension folder
+cd c:\Users\HP\Documents\software\framework\ide-extension
+
+# If you have a compile script in package.json
+npm run compile
+
+# Or run tsc directly if you have it installed globally/locally
+npx tsc
