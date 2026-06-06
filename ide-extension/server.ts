@@ -1,5 +1,10 @@
 import * as path from 'path';
 import * as fs from 'fs';
+import * as prettier from 'prettier';
+import * as prettierPluginBabel from "prettier/plugins/babel";
+import * as prettierPluginEstree from "prettier/plugins/estree";
+import * as prettierPluginHtml from "prettier/plugins/html";
+import * as prettierPluginPostcss from "prettier/plugins/postcss";
 import {
     createConnection,
     TextDocuments,
@@ -22,7 +27,11 @@ import {
     DocumentFormattingParams,
     Definition,
     Location,
-    CompletionList
+    CompletionList,
+    SemanticTokensBuilder,
+    CodeAction,
+    CodeActionKind,
+    CodeActionParams
 } from 'vscode-languageserver/node';
 
 import { TextDocument } from 'vscode-languageserver-textdocument';
@@ -49,6 +58,8 @@ connection.onInitialize((params: InitializeParams) => {
             hoverProvider: true,
             // Tell the client that this server supports document formatting
             documentFormattingProvider: true,
+            // Tell the client that this server supports "Quick Fixes"
+            codeActionProvider: true,
             // Tell the client that this server supports highlighting matching symbols
             documentHighlightProvider: true,
             // Tell the client that this server supports "Go to Definition"
@@ -299,6 +310,13 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
             insertTextFormat: InsertTextFormat.Snippet
         },
         { label: 'component', kind: CompletionItemKind.Keyword },
+        { 
+            label: 'import', 
+            kind: CompletionItemKind.Keyword,
+            detail: 'Import a module dependency',
+            insertText: "import { ${1:Member} } from '${2:./module}';",
+            insertTextFormat: InsertTextFormat.Snippet
+        },
         { label: 'signal', kind: CompletionItemKind.Function, detail: 'Create a reactive signal' },
         { label: 'computed', kind: CompletionItemKind.Function, detail: 'Create a derived reactive value' },
         { label: 'effect', kind: CompletionItemKind.Function, detail: 'Register a side effect' },
@@ -481,59 +499,113 @@ connection.onDocumentHighlight((params: TextDocumentPositionParams): DocumentHig
 /**
  * Definition Logic: Resolve component paths and imports.
  */
-connection.onDefinition((params: TextDocumentPositionParams): Definition | null => {
+connection.onDefinition((params: TextDocumentPositionParams): Location | Location[] | null => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
 
     const text = document.getText();
-    const offset = document.offsetAt(params.position);
+    const position = params.position;
     const lines = text.split(/\r?\n/);
-    const line = lines[params.position.line];
+    const currentLine = lines[position.line];
 
-    // Get word under cursor
-    const wordMatchAtPos = line.slice(0, params.position.character).match(/[@a-zA-Z0-9_-]+$/);
-    const wordRestAtPos = line.slice(params.position.character).match(/^[a-zA-Z0-9_-]+/);
-    const word = (wordMatchAtPos ? wordMatchAtPos[0] : '') + (wordRestAtPos ? wordRestAtPos[0] : '');
+    // 1. Resolve relative imports (Robust Logic)
+    const importRegex = /from\s+['"]([^'"]+)['"]/;
+    const match = currentLine.match(importRegex);
 
-    // 1. Resolve relative imports
-    const importMatch = line.match(/from\s+['"](\..+?)['"]/);
-    if (importMatch) {
-        const targetPathRaw = importMatch[1];
-        const targetPath = targetPathRaw.endsWith('.can') ? targetPathRaw : `${targetPathRaw}.can`;
-        const fullPath = path.resolve(path.dirname(fileURLToPath(params.textDocument.uri)), targetPath);
+    if (match && match[1]) {
+        const importTarget = match[1]; 
+        
+        // Convert URI token references safely to a real machine file path
+        let sourcePath = '';
+        try {
+            sourcePath = fileURLToPath(document.uri);
+        } catch (e) {
+            // Fallback for edge-case URI configurations
+            sourcePath = document.uri.replace(/^file:\/\/\/?/, '');
+            if (process.platform === 'win32' && !sourcePath.match(/^[a-zA-Z]:/)) {
+                sourcePath = sourcePath.replace(/^\//, '');
+            }
+        }
+        
+        const currentDir = path.dirname(sourcePath);
+        let targetAbsolutePath = path.resolve(currentDir, importTarget);
 
-        if (fs.existsSync(fullPath)) {
-            return Location.create(pathToFileURL(fullPath).toString(), { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } });
+        // Standard sequence for deducing extensions if left implicit in code
+        const lookupExtensions = ['', '.ts', '.can', '.tsx', '.js', '.jsx'];
+        let workingFile = '';
+
+        for (const ext of lookupExtensions) {
+            const pathWithExt = targetAbsolutePath + ext;
+            if (fs.existsSync(pathWithExt) && fs.statSync(pathWithExt).isFile()) {
+                workingFile = pathWithExt;
+                break;
+            }
+        }
+
+        // DEEP FOLDER LOOKUP: If no extension matched, check if it's a folder containing files
+        if (!workingFile && fs.existsSync(targetAbsolutePath)) {
+            const isDir = fs.statSync(targetAbsolutePath).isDirectory();
+            if (isDir) {
+                const innerExtensions = ['.ts', '.can', '.js', '.tsx'];
+                for (const ext of innerExtensions) {
+                    const indexPath = path.join(targetAbsolutePath, `index${ext}`);
+                    if (fs.existsSync(indexPath) && fs.statSync(indexPath).isFile()) {
+                        workingFile = indexPath;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (!workingFile) {
+            for (const ext of ['.ts', '/index.ts', '.can', '/index.can', '.js', '/index.js']) {
+                const guessingPath = targetAbsolutePath + ext;
+                if (fs.existsSync(guessingPath) && fs.statSync(guessingPath).isFile()) {
+                    workingFile = guessingPath;
+                    break;
+                }
+            }
+        }
+
+        if (workingFile) {
+            const destinationUri = pathToFileURL(workingFile).toString();
+            return Location.create(destinationUri, { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } });
         }
     }
 
     // 2. Resolve Definitions (Internal Signals/Methods or Components)
+    const offset = document.offsetAt(params.position);
+    const wordMatchAtPos = currentLine.slice(0, position.character).match(/[@a-zA-Z0-9_-]+$/);
+    const wordRestAtPos = currentLine.slice(position.character).match(/^[a-zA-Z0-9_-]+/);
+    const word = (wordMatchAtPos ? wordMatchAtPos[0] : '') + (wordRestAtPos ? wordRestAtPos[0] : '');
+
     if (word) {
         const cleanWord = word.startsWith('@') ? word.slice(1) : word;
-
-        // 2.1 Internal search for signals, variables, or functions in the current file
         const declarationRegex = new RegExp(`\\b(?:var|let|const|function)\\s+${cleanWord}\\b|\\b${cleanWord}\\s*\\(`, 'g');
-        let match;
-        while ((match = declarationRegex.exec(text)) !== null) {
-            // If we're on the declaration itself, don't jump to it
-            if (match.index <= offset && offset <= match.index + match[0].length) continue;
-
+        let declMatch;
+        while ((declMatch = declarationRegex.exec(text)) !== null) {
+            if (declMatch.index <= offset && offset <= declMatch.index + declMatch[0].length) continue;
             return Location.create(document.uri, {
-                start: document.positionAt(match.index),
-                end: document.positionAt(match.index + match[0].length)
+                start: document.positionAt(declMatch.index),
+                end: document.positionAt(declMatch.index + declMatch[0].length)
             });
         }
 
-        // 2.2 Resolve Component Tags or Class Names (External files)
-        // Convert kebab-case to PascalCase if needed
         const componentName = word.includes('-') 
             ? word.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
             : word;
         
-        const dir = path.dirname(fileURLToPath(params.textDocument.uri));
-        const extensions = ['.can', '.ts', '.js'];
-        
-        for (const ext of extensions) {
+        let sourcePath = '';
+        try {
+            sourcePath = fileURLToPath(document.uri);
+        } catch (e) {
+            sourcePath = document.uri.replace(/^file:\/\/\/?/, '');
+            if (process.platform === 'win32' && !sourcePath.match(/^[a-zA-Z]:/)) {
+                sourcePath = sourcePath.replace(/^\//, '');
+            }
+        }
+        const dir = path.dirname(sourcePath);
+        for (const ext of ['.can', '.ts', '.js']) {
             const possibleFile = path.join(dir, `${componentName}${ext}`);
             if (fs.existsSync(possibleFile)) {
                 return Location.create(pathToFileURL(possibleFile).toString(), { start: { line: 0, character: 0 }, end: { line: 0, character: 0 } });
@@ -545,42 +617,80 @@ connection.onDefinition((params: TextDocumentPositionParams): Definition | null 
 });
 
 /**
- * Formatting Logic: Provides automatic indentation for .can files.
+ * Code Action Logic: Provides Quick Fixes for template variable warnings.
  */
-connection.onDocumentFormatting((params: DocumentFormattingParams): TextEdit[] => {
+connection.onCodeAction((params: CodeActionParams): CodeAction[] => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return [];
 
-    const edits: TextEdit[] = [];
-    const text = document.getText();
-    const lines = text.split(/\r?\n/);
-    let indent = 0;
+    const codeActions: CodeAction[] = [];
+    for (const diagnostic of params.context.diagnostics) {
+        // Filter for our specific undeclared variable warning
+        if (diagnostic.source === 'Can Language Server' && diagnostic.message.includes('not declared')) {
+            const varMatch = diagnostic.message.match(/"([^"]+)"/);
+            if (!varMatch) continue;
 
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const trimmed = line.trim();
+            const varName = varMatch[1];
+            const text = document.getText();
 
-        if (!trimmed) continue;
+            // Find a suitable place to insert the new variable declaration.
+            // We look for the start of the component block.
+            const componentMatch = text.match(/component\s+[A-Za-z0-9_]+\s*\{/);
+            if (componentMatch) {
+                const insertOffset = componentMatch.index! + componentMatch[0].length;
+                const insertPos = document.positionAt(insertOffset);
 
-        // Decrease indent for closing symbols
-        if (trimmed.startsWith('}') || trimmed.startsWith(']') || trimmed.startsWith('</') || trimmed.startsWith('</style>')) {
-            indent = Math.max(0, indent - 1);
-        }
-
-        const newText = ' '.repeat(indent * 4) + trimmed;
-        if (line !== newText) {
-            edits.push({
-                range: { start: { line: i, character: 0 }, end: { line: i, character: line.length } },
-                newText
-            });
-        }
-
-        // Increase indent for opening symbols
-        if (trimmed.endsWith('{') || trimmed.endsWith('[') || (trimmed.startsWith('<') && !trimmed.startsWith('</') && !trimmed.endsWith('/>') && !trimmed.includes('/>'))) {
-            indent++;
+                codeActions.push({
+                    title: `Declare signal "${varName}" in script`,
+                    kind: CodeActionKind.QuickFix,
+                    diagnostics: [diagnostic],
+                    isPreferred: true,
+                    edit: {
+                        changes: {
+                            [params.textDocument.uri]: [{
+                                range: Range.create(insertPos, insertPos),
+                                newText: `\n    var ${varName} = signal(null);`
+                            }]
+                        }
+                    }
+                });
+            }
         }
     }
-    return edits;
+    return codeActions;
+});
+
+/**
+ * Document Formatting Logic: Automatically triggers on Alt+Shift+F or on Save.
+ */
+connection.onDocumentFormatting(async (params: DocumentFormattingParams): Promise<TextEdit[]> => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+
+    const rawText = document.getText();
+
+    try {
+        const formattedText = await prettier.format(rawText, {
+            parser: 'babel-ts',
+            plugins: [prettierPluginBabel, prettierPluginEstree, prettierPluginHtml, prettierPluginPostcss],
+            tabWidth: params.options.tabSize,
+            useTabs: !params.options.insertSpaces,
+            semi: true,
+            singleQuote: true,
+            printWidth: 100,
+            trailingComma: 'none'
+        });
+
+        const fullRange = Range.create(
+            document.positionAt(0),
+            document.positionAt(rawText.length)
+        );
+
+        return [TextEdit.replace(fullRange, formattedText)];
+    } catch (error: any) {
+        connection.console.error(`Can Formatter Framework Error: ${error.message}`);
+        return [];
+    }
 });
 
 /**
@@ -591,10 +701,7 @@ connection.languages.semanticTokens.on((params) => {
     if (!document) return { data: [] };
 
     const text = document.getText();
-    const data: number[] = [];
-    let lastLine = 0;
-    let lastChar = 0;
-
+    const builder = new SemanticTokensBuilder();
     const tokens: { line: number, char: number, length: number, type: number, mod: number }[] = [];
 
     // 1. Signals: @name
@@ -622,19 +729,21 @@ connection.languages.semanticTokens.on((params) => {
         tokens.push({ line: pos.line, char: pos.character, length: name.length, type: 5, mod: 0 }); // class
     }
 
+    // 4. Reactive framework helpers (signal, computed, effect, etc.)
+    const reactiveKeywords = /\b(signal|computed|effect|useDraggable|defineCustomElement)\b/g;
+    while ((match = reactiveKeywords.exec(text)) !== null) {
+        const pos = document.positionAt(match.index);
+        tokens.push({ line: pos.line, char: pos.character, length: match[0].length, type: 6, mod: 0 }); // macro
+    }
+
     // Sort tokens by line and character
     tokens.sort((a, b) => a.line !== b.line ? a.line - b.line : a.char - b.char);
 
-    for (const token of tokens) {
-        const deltaLine = token.line - lastLine;
-        const deltaChar = deltaLine === 0 ? token.char - lastChar : token.char;
-
-        data.push(deltaLine, deltaChar, token.length, token.type, token.mod);
-        lastLine = token.line;
-        lastChar = token.char;
+    for (const t of tokens) {
+        builder.push(t.line, t.char, t.length, t.type, t.mod);
     }
 
-    return { data };
+    return builder.build();
 });
 
 // The content of a text document has changed. This event is emitted
@@ -652,9 +761,19 @@ documents.onDidChangeContent(change => {
     }, 500));
 });
 
+// Clear diagnostics when a file is closed
+documents.onDidClose(change => {
+    connection.sendDiagnostics({ uri: change.document.uri, diagnostics: [] });
+});
+
 async function validateTextDocument(textDocument: TextDocument): Promise<void> {
     const text = textDocument.getText();
     const diagnostics: Diagnostic[] = [];
+
+    // 1. COMPILER VALIDATION (Syntax & Directives)
+    // This runs the full transpiler to catch parsing errors and directive misconfigurations.
+    // We use a try/catch because the compiler throws on first fatal error.
+    let compilerErrorLine = -1;
 
     try {
         // Use the real framework compiler to validate the document.
@@ -665,21 +784,110 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
         // We attempt to extract line numbers if the compiler provides them in the error message.
         const message = e.message || 'Unknown syntax error';
         const lineMatch = message.match(/line (\d+)/i);
-        const line = lineMatch ? parseInt(lineMatch[1]) - 1 : 0;
+        compilerErrorLine = lineMatch ? parseInt(lineMatch[1]) - 1 : 0;
 
         diagnostics.push({
             severity: DiagnosticSeverity.Error,
             range: {
-                start: { line, character: 0 },
-                end: { line, character: Number.MAX_VALUE }
+                start: { line: compilerErrorLine, character: 0 },
+                end: { line: compilerErrorLine, character: Number.MAX_VALUE }
             },
             message: message,
             source: 'Can Compiler'
         });
     }
 
-    // Send the computed diagnostics back to VS Code.
+    // 2. VARIABLE USAGE VALIDATION (Template vs Script)
+    // Only run if we don't have a fatal compiler error on the same line to avoid noise.
+    const declaredVariables = new Set<string>([
+        'this', 'props', 'Math', 'JSON', 'console', 'window', 'document', 
+        'onMount', 'onUnmounted', 'onUpdated', 'onCleanup'
+    ]);
+    
+    // Extract standard declarations
+    const declarationRegex = /\b(?:var|let|const|function)\s+([a-zA-Z0-9_$]+)/g;
+    let declMatch;
+    while ((declMatch = declarationRegex.exec(text)) !== null) {
+        if (declMatch[1]) declaredVariables.add(declMatch[1]);
+    }
+
+    // Extract destructuring variables (e.g., var { x, y } = useDraggable())
+    const destructureRegex = /(?:var|let|const)\s*\{\s*([^}]+)\s*\}\s*=/g;
+    let destMatch;
+    while ((destMatch = destructureRegex.exec(text)) !== null) {
+        if (destMatch[1]) {
+            destMatch[1].split(',').forEach(v => {
+                const name = v.split(':')[0].trim(); // Handle { source: alias }
+                if (name) declaredVariables.add(name);
+            });
+        }
+    }
+
+    // SCAN TEMPLATES
+    const templateRegex = /(?:var|this\.|let|const)?\s*template\s*[:=]\s*`([\s\S]*?)`/g;
+    let templateMatch;
+    while ((templateMatch = templateRegex.exec(text)) !== null) {
+        const templateContent = templateMatch[1];
+        const templateStartOffset = templateMatch.index + text.indexOf('`', templateMatch.index) - templateMatch.index + 1;
+
+        // A. Interpolations {{ expr }}
+        const interpolationRegex = /\{\{\s*([\s\S]*?)\s*\}\}/g;
+        let interpMatch;
+        while ((interpMatch = interpolationRegex.exec(templateContent)) !== null) {
+            const expression = interpMatch[1];
+            const matchOffset = templateStartOffset + interpMatch.index + (interpMatch[0].indexOf(expression));
+            analyzeExpression(expression, matchOffset, declaredVariables, textDocument, diagnostics);
+        }
+
+        // B. Structural Directives (c-if, c-show, etc.)
+        const directiveRegex = /\b(c-if|c-show|c-else-if)=["']([^"']+)["']/g;
+        let dirMatch;
+        while ((dirMatch = directiveRegex.exec(templateContent)) !== null) {
+            const expression = dirMatch[2];
+            const matchOffset = templateStartOffset + dirMatch.index + dirMatch[0].indexOf(expression);
+            analyzeExpression(expression, matchOffset, declaredVariables, textDocument, diagnostics);
+        }
+    }
+
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
+}
+
+/**
+ * Isolated Expression Tokenizer: Identifies used variables and throws diagnostics if undeclared.
+ */
+function analyzeExpression(
+    expression: string, 
+    baseOffset: number, 
+    declaredVariables: Set<string>, 
+    document: TextDocument, 
+    diagnostics: Diagnostic[]
+) {
+    const wordsRegex = /\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/g;
+    let wordMatch;
+
+    while ((wordMatch = wordsRegex.exec(expression)) !== null) {
+        const word = wordMatch[0];
+        const wordIndex = wordMatch.index;
+
+        // 1. Ignore object properties (ignore 'value' in 'count.value')
+        const charBeforeWord = expression.charAt(wordIndex - 1);
+        if (charBeforeWord === '.') continue;
+
+        // 2. Ignore numeric literals and JS keywords handled by the lexer
+        if (!isNaN(Number(word))) continue;
+
+        if (!declaredVariables.has(word)) {
+            const startPosition = document.positionAt(baseOffset + wordIndex);
+            const endPosition = document.positionAt(baseOffset + wordIndex + word.length);
+
+            diagnostics.push({
+                severity: DiagnosticSeverity.Warning,
+                range: Range.create(startPosition, endPosition),
+                message: `Can Ecosystem Alert: The variable "${word}" is used in the template but is not declared in the component script.`,
+                source: 'Can Language Server'
+            });
+        }
+    }
 }
 
 // Listen for document events

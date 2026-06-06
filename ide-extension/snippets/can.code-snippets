@@ -1,4 +1,3 @@
-
 {
 	"Can Component": {
 		"prefix": "component",
@@ -17,7 +16,7 @@
 			"\tvar template = `",
 			"\t\t<div class=\"${1:MyComponent}\" @click=\"increment\">",
 			"\t\t\t<h1>${1:MyComponent}</h1>",
-			"\t\t\t<p>Count: {{${3:count}}}</p>",
+			"\t\t\t<p>Count: {{ ${3:count}.value }}</p>",
 			"\t\t\t<slot></slot>",
 			"\t\t</div>",
 			"\t`;",
@@ -30,7 +29,6 @@
 			"</style>"
 		],
 		"description": "Create a new Can Component skeleton"
-
 	},
 	"Can Create Store": {
 		"prefix": "createStore",
@@ -93,7 +91,7 @@
 		"prefix": "cfor",
 		"body": [
 			"<div c-for=\"${1:item} in ${2:items}\">",
-			"\t{{${1:item}}}",
+			"\t{{ ${1:item} }}",
 			"</div>"
 		],
 		"description": "Template for loop directive"
@@ -114,35 +112,12 @@
 		],
 		"description": "Template show directive (toggles display)"
 	},
-	"Can Lifecycle onUnmounted": {
-		"prefix": "onUnmounted",
-		"body": [
-			"function onUnmounted() {",
-			"\t$0",
-			"}"
-		],
-		"description": "onUnmounted lifecycle hook"
-	},
 	"Can Log Signal": {
 		"prefix": "logSignal",
 		"body": [
-			"effect(() => console.log('${1:value}:', ${1:value}));"
+			"effect(() => console.log('${1:value}:', ${1:value}.value));"
 		],
 		"description": "Debug a signal using an effect"
-	},
-	"Composable: useFetch": {
-		"prefix": "useFetch",
-		"body": [
-			"const { data, error, isFetching, execute } = useFetch('${1:url}');"
-		],
-		"description": "Reactive fetch composable"
-	},
-	"Composable: useLocalStorage": {
-		"prefix": "useLocalStorage",
-		"body": [
-			"const ${1:state} = useLocalStorage('${2:key}', ${3:defaultValue});"
-		],
-		"description": "Persist state in localStorage"
 	},
 	"Composable: useToggle": {
 		"prefix": "useToggle",
@@ -160,13 +135,6 @@
 		],
 		"description": "Attach and automatically cleanup event listeners"
 	},
-	"Composable: useMediaQuery": {
-		"prefix": "useMediaQuery",
-		"body": [
-			"const isLargeScreen = useMediaQuery('(min-width: ${1:1024}px)');"
-		],
-		"description": "Reactive media query"
-	},
 	"Composable: useAnimate": {
 		"prefix": "useAnimate",
 		"body": [
@@ -178,29 +146,5 @@
 			"});"
 		],
 		"description": "Orchestrate animations with automatic cleanup"
-	},
-	"Composable: useDebounce": {
-		"prefix": "useDebounce",
-		"body": [
-			"const ${1:debouncedValue} = useDebounce(${2:signal}, ${3:300});"
-		],
-		"description": "Debounce a reactive signal"
-	},
-	"Composable: useInterval": {
-		"prefix": "useInterval",
-		"body": [
-			"useInterval(() => {",
-			"\t$0",
-			"}, ${1:1000});"
-		],
-		"description": "Safe interval that clears on unmount"
-	},
-	"Composable: useAsyncState": {
-		"prefix": "useAsyncState",
-		"body": [
-			"const { state, isReady, isLoading, error } = useAsyncState(${1:promise}, ${2:initialState});"
-		],
-		"description": "Handle async state with signals"
 	}
 }
-

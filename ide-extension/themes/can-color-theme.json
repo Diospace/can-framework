@@ -13,34 +13,40 @@
 	},
 	"tokenColors": [
 		{
-			"scope": ["keyword", "storage", "storage.type"],
+			"scope": ["keyword", "storage", "storage.type", "keyword.control"],
 			"settings": {
 				"foreground": "#C586C0"
 			}
 		},
 		{
-			"scope": ["keyword.other.can", "source.can entity.name.function", "source.can support.function"],
+			"scope": ["keyword.other.can", "source.can entity.name.function", "source.can support.function", "entity.name.function"],
 			"settings": {
 				"foreground": "#DCDCAA"
 			}
 		},
 		{
-			"scope": ["source.can entity.name.type", "source.can support.class"],
+			"scope": ["source.can entity.name.type", "source.can support.class", "entity.name.type", "support.class"],
 			"settings": {
 				"foreground": "#4EC9B0",
 				"fontStyle": "bold"
 			}
 		},
 		{
-			"scope": ["source.can variable", "source.can meta.definition.variable"],
+			"scope": ["source.can variable", "source.can meta.definition.variable", "variable", "variable.object", "variable.other.readwrite"],
 			"settings": {
 				"foreground": "#9CDCFE"
 			}
 		},
 		{
-			"scope": "variable.other.css",
+			"scope": ["variable.other.css", "support.type.property-name.css"],
 			"settings": {
 				"foreground": "#9CDCFE"
+			}
+		},
+		{
+			"scope": ["entity.other.attribute-name.class.css", "entity.other.attribute-name.id.css"],
+			"settings": {
+				"foreground": "#DCDCAA"
 			}
 		},
 		{
@@ -50,13 +56,13 @@
 			}
 		},
 		{
-			"scope": ["meta.interpolation.can", "meta.template.expression"],
+			"scope": ["meta.interpolation.can", "meta.template.expression", "punctuation.section.embedded"],
 			"settings": {
 				"foreground": "#FF9E64"
 			}
 		},
 		{
-			"scope": "entity.name.tag",
+			"scope": ["entity.name.tag", "entity.name.tag.html", "entity.name.tag.css"],
 			"settings": {
 				"foreground": "#569CD6"
 			}
@@ -102,7 +108,7 @@
 			}
 		},
 		{
-			"scope": "punctuation",
+			"scope": ["punctuation", "keyword.operator"],
 			"settings": {
 				"foreground": "#D4D4D4"
 			}
@@ -114,7 +120,7 @@
 			}
 		},
 		{
-			"scope": ["constant.numeric", "constant.language", "constant.character", "constant.other"],
+			"scope": ["constant.numeric", "constant.language", "constant.character", "constant.other", "support.constant.property-value.css"],
 			"settings": {
 				"foreground": "#B5CEA8"
 			}

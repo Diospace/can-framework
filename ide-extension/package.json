@@ -2,7 +2,7 @@
   "name": "can-language-support",
   "displayName": "Can Framework Official Tooling",
   "description": "Language support and themes for the Can Framework",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "can-framework",
   "icon": "icons/can.png",
   "license": "MIT",
@@ -28,7 +28,8 @@
   "dependencies": {
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.11"
+    "vscode-languageserver-textdocument": "^1.0.11",
+    "prettier": "^3.3.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
@@ -63,7 +64,12 @@
       {
         "language": "can",
         "scopeName": "source.can",
-        "path": "./syntaxes/can.tmLanguage.json"
+        "path": "./syntaxes/can.tmLanguage.json",
+        "embeddedLanguages": {
+          "text.html.basic": "html",
+          "source.ts": "typescript",
+          "source.css": "css"
+        }
       }
     ],
     "themes": [
@@ -85,6 +91,18 @@
         "language": "can",
         "path": "./snippets/can.code-snippets"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Can Framework Tooling",
+      "properties": {
+        "emmet.includeLanguages": {
+          "type": "object",
+          "default": {
+            "can": "html"
+          },
+          "description": "Map the Can template extensions directly into the Emmet syntax parser layout core."
+        }
+      }
+    }
   }
 }

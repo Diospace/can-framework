@@ -12,6 +12,17 @@ Official Visual Studio Code support for the **Can Framework**. This extension pr
 - **Go to Definition**: Navigate directly to imported components or class definitions using `F12` or `Ctrl+Click`.
 - **Real-time Diagnostics**: Immediate feedback on syntax errors and compiler warnings directly in the editor.
 - **Document Formatting**: Automatic code formatting and indentation for clean, consistent codebases.
+### 🛠️ Recommended Configuration
+
+To get the best experience, including **Format on Save**, add the following to your VS Code `settings.json`:
+
+```json
+"[can]": {
+    "editor.defaultFormatter": "can-framework.can-language-support",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4
+}
+```
 
 ### 🎨 Syntax Highlighting
 - High-performance colorization for Can-specific syntax, including the `component` block, reactive signals, and embedded HTML/CSS.
@@ -49,6 +60,8 @@ This extension contributes the following commands to the Command Palette (`Ctrl+
 - CSS completion is currently limited to standard property names.
 
 ## Release Notes
+
+### 0.0.5
 
 ### 0.0.4
 - Added support for CSS property completion.

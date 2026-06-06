@@ -51,17 +51,17 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    context.subscriptions.push(
-        vscode.commands.registerCommand('can.restartServer', async () => {
-            if (client) {
-                await client.stop();
-                await client.start();
-                vscode.window.showInformationMessage('Can Language Server restarted.');
-            }
-        })
-    );
+    const restartCommand = vscode.commands.registerCommand('can.restartServer', async () => {
+        if (client) {
+            await client.stop();
+            await client.start();
+            vscode.window.showInformationMessage('Can Language Server restarted.');
+        }
+    });
 
-    // --- Auto-Close Tag Logic ---
+    context.subscriptions.push(restartCommand);
+
+    // --- 3. AUTO-CLOSE TAG LOGIC ---
     vscode.workspace.onDidChangeTextDocument(event => {
         const editor = vscode.window.activeTextEditor;
         if (!editor || event.document.languageId !== 'can' || event.contentChanges.length !== 1) {
@@ -85,7 +85,7 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         const tagName = tagMatch[1];
-        const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+    const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
 
         // Don't close void elements (e.g., <img >)
         if (voidElements.includes(tagName.toLowerCase())) {

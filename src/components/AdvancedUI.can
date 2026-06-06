@@ -57,7 +57,7 @@ component AdvancedUI {
                     <div class="virtual-container" style="height: {{totalHeight}}px">
                         <div c-for="item in visibleItems" class="virtual-item" style="{{item.style}}">
                             {{item.item}}
-                            
+                        
                         </div>
                         <div c-if="items.value.length === 0" class="empty-state">
                             No items to display

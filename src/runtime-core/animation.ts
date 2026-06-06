@@ -71,6 +71,7 @@ class Engine {
     private rafId: number | null = null;
 
     add(anim: AnimationInstance) {
+        if (typeof requestAnimationFrame === 'undefined') return;
         this.animations.add(anim);
         if (!this.rafId) this.tick();
     }
@@ -197,6 +198,17 @@ function parseColor(color: string): number[] {
         const [r, g, b] = hslToRgb(h, s, l);
         return [r, g, b, a];
     }
+
+    // Fallback: Resolve via DOM for named colors and CSS variables
+    if (typeof document !== 'undefined') {
+        const temp = document.createElement('div');
+        temp.style.color = color;
+        document.body.appendChild(temp);
+        const resolved = getComputedStyle(temp).color;
+        document.body.removeChild(temp);
+        if (resolved !== color) return parseColor(resolved);
+    }
+
     return [0, 0, 0, 1]; // Default to black if parsing fails
 }
 
@@ -217,7 +229,13 @@ function getUnit(val: string | number): string {
 }
 
 function getCSSValue(el: HTMLElement, prop: string): string {
-    const uppercasePropName = prop.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    // Guard for SSR or non-browser environments
+    if (typeof getComputedStyle === 'undefined') return '0';
+    
+    // Convert camelCase to kebab-case
+    const uppercasePropName = prop.startsWith('--') 
+        ? prop 
+        : prop.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     return getComputedStyle(el).getPropertyValue(uppercasePropName) || '0';
 }
 

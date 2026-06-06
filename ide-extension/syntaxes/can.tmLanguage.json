@@ -4,22 +4,23 @@
 	"scopeName": "source.can",
 	"patterns": [
 		{ "include": "#comments" },
-		{ "include": "#component" },
-		{ "include": "#style" },
 		{ "include": "#imports" },
+		{ "include": "#style" },
+		{ "include": "#component" },
 		{ "include": "#keywords" },
-		{ "include": "#strings" }
+		{ "include": "#strings" },
+		{ "include": "source.ts" }
 	],
 	"repository": {
 		"directives": {
 			"patterns": [
 				{
-					"match": "\\b(c-if|c-for|c-model|c-show|c-bind|c-text|c-html|c-once)\\b",
-					"name": "keyword.control.directive.can"
+					"match": "\\b(c-if|c-for|c-model|c-show|c-bind|c-text|c-html|c-once|c-ref)\\b",
+					"name": "keyword.control.directive.html.can"
 				},
 				{
 					"match": "(@|:|#)[a-zA-Z0-9-]+",
-					"name": "entity.other.attribute-name.directive.can"
+					"name": "entity.other.attribute-name.html.can"
 				}
 			]
 		},
@@ -30,6 +31,7 @@
 				"2": { "name": "entity.name.type.class.can" }
 			},
 			"end": "\\}",
+			"contentName": "meta.embedded.block.typescript",
 			"patterns": [
 				{ "include": "#comments" },
 				{ "include": "#template" },
@@ -40,8 +42,8 @@
 				{ "include": "#member-access" },
 				{ "include": "#numeric" },
 				{ "include": "#constants" },
-				{ "include": "#template-expression" },
-				{ "include": "#keywords" }
+				{ "include": "#keywords" },
+				{ "include": "source.ts" }
 			]
 		},
 		"imports": {
@@ -49,9 +51,9 @@
 			"beginCaptures": {
 				"1": { "name": "keyword.control.import.can" }
 			},
-			"end": "(;)",
+			"end": "(;|$)",
 			"patterns": [
-				{ "include": "source.js" }
+				{ "include": "source.ts" }
 			]
 		},
 		"keywords": {
@@ -69,8 +71,8 @@
 					"name": "keyword.other.can"
 				},
 				{
-					"match": "\\b(signal|computed|effect)\\b",
-					"name": "support.function.reactive.can"
+					"match": "\\b(signal|computed|effect|useDraggable|defineCustomElement)\\b",
+					"name": "support.function.macro.js.can"
 				},
 				{
 					"match": "\\b(function)\\s+([a-zA-Z0-9_]+)",
@@ -92,14 +94,11 @@
 					"name": "variable.other.property.force-transform.can"
 				},
 				{
-					"begin": "\\b(var|let|const)\\b",
-					"beginCaptures": {
-						"1": { "name": "storage.type.can" }
-					},
-					"end": "(;|$)"
+					"match": "\\b(var|let|const)\\b",
+					"name": "storage.type.can"
 				},
 				{ "include": "#keywords" },
-				{ "include": "source.js" }
+				{ "include": "source.ts" }
 			]
 		},
 		"methods": {
@@ -145,21 +144,36 @@
 				"3": { "name": "string.template.can" }
 			},
 			"end": "`",
-			"name": "string.template.can",
+			"contentName": "meta.embedded.block.html",
 			"patterns": [
-				{ "include": "#template-expression" },
-				{ "include": "#interpolation" },
 				{ "include": "#directives" },
+				{ "include": "#interpolation" },
+				{ "include": "#template-expression" },
 				{ "include": "text.html.basic" }
 			]
 		},
-		"interpolation": { "name": "meta.interpolation.can", "begin": "\\{\\{", "end": "\\}\\}", "patterns": [{ "include": "source.js" }] },
-		"template-expression": { "name": "meta.template.expression.can", "begin": "\\$\\{", "end": "\\}", "patterns": [{ "include": "source.js" }] },
+		"interpolation": { 
+			"name": "meta.interpolation.can", 
+			"begin": "\\{\\{", 
+			"end": "\\}\\}", 
+			"beginCaptures": { "0": { "name": "punctuation.section.embedded.begin.can" } },
+			"endCaptures": { "0": { "name": "punctuation.section.embedded.end.can" } },
+			"patterns": [{ "include": "source.ts" }] 
+		},
+		"template-expression": { 
+			"name": "meta.template.expression.can", 
+			"begin": "\\$\\{", 
+			"end": "\\}", 
+			"beginCaptures": { "0": { "name": "punctuation.section.embedded.begin.can" } },
+			"endCaptures": { "0": { "name": "punctuation.section.embedded.end.can" } },
+			"patterns": [{ "include": "source.ts" }] 
+		},
 		"style": {
 			"begin": "(<)(style)(?:\\s+(scoped|lang=\"[a-z]+\"))*\\s*(>)",
 			"beginCaptures": { "1": { "name": "punctuation.definition.tag.begin.can" }, "2": { "name": "entity.name.tag.style.can" }, "3": { "name": "entity.other.attribute-name.can" }, "4": { "name": "punctuation.definition.tag.end.can" } },
 			"end": "(</)(style)(>)",
 			"endCaptures": { "1": { "name": "punctuation.definition.tag.begin.can" }, "2": { "name": "entity.name.tag.style.can" }, "3": { "name": "punctuation.definition.tag.end.can" } },
+			"contentName": "meta.embedded.block.css",
 			"patterns": [{ "include": "source.css" }]
 		}
 	}

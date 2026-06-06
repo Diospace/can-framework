@@ -18147,15 +18147,14 @@ function activate(context) {
       vscode.window.showInformationMessage("Can Language Support is active with LSP enabled.");
     })
   );
-  context.subscriptions.push(
-    vscode.commands.registerCommand("can.restartServer", async () => {
-      if (client) {
-        await client.stop();
-        await client.start();
-        vscode.window.showInformationMessage("Can Language Server restarted.");
-      }
-    })
-  );
+  const restartCommand = vscode.commands.registerCommand("can.restartServer", async () => {
+    if (client) {
+      await client.stop();
+      await client.start();
+      vscode.window.showInformationMessage("Can Language Server restarted.");
+    }
+  });
+  context.subscriptions.push(restartCommand);
   vscode.workspace.onDidChangeTextDocument((event) => {
     const editor = vscode.window.activeTextEditor;
     if (!editor || event.document.languageId !== "can" || event.contentChanges.length !== 1) {
