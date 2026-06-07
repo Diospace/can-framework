@@ -6087,7 +6087,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Export version or other metadata if needed
-var VERSION = '1.1.3';
+var VERSION = '1.1.5';
 })();
 
 /******/ 	return __webpack_exports__;
