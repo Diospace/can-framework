@@ -20,7 +20,8 @@ To get the best experience, including **Format on Save**, add the following to y
 "[can]": {
     "editor.defaultFormatter": "can-framework.can-language-support",
     "editor.formatOnSave": true,
-    "editor.tabSize": 4
+    "editor.tabSize": 4,
+    "editor.semanticHighlighting.enabled": true
 }
 ```
 
@@ -60,6 +61,13 @@ This extension contributes the following commands to the Command Palette (`Ctrl+
 - CSS completion is currently limited to standard property names.
 
 ## Release Notes
+
+### 0.0.7
+- Enhanced semantic highlighting for `props` and `this` keywords.
+- Improved Outline view accuracy for signals vs fields.
+- Fixed theme mapping for reactive functions.
+
+## 0.0.6
 
 ### 0.0.5
 

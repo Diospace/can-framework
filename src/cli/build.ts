@@ -1,6 +1,6 @@
-import * as fs from 'fs';
-import * as path from 'path';
-import { fileURLToPath } from 'url';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import * as ts from 'typescript';
 import { transformSync } from 'esbuild';
 import { transpile } from '../compiler/codegen';
@@ -22,13 +22,13 @@ export function fixImports(code: string, fullPath: string): string {
 
     // 1. Handle standard imports/exports: import {x} from './y' or export {x} from './y'
     // Added a check to prevent double .mjs extensions
-    fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.(?:js|can|ts))?\2/g, (match, p1, p2, p3) => {
-        return p3.endsWith('.mjs') ? match : `${p1} ${p2}${p3}.mjs${p2}`;
+    fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.(?:js|can|ts|mjs))?\2/g, (match, p1, p2, p3) => {
+        return `${p1} ${p2}${p3}.mjs${p2}`;
     });
-    
+
     // 2. Handle dynamic imports: import('./y')
-    fixed = fixed.replace(/import\((['"])(\..+?)(?:\.(?:js|can|ts))?\1\)/g, (match, p1, p2) => {
-        return p2.endsWith('.mjs') ? match : `import(${p1}${p2}.mjs${p1})`;
+    fixed = fixed.replace(/import\((['"])(\..+?)(?:\.(?:js|can|ts|mjs))?\1\)/g, (match, p1, p2) => {
+        return `import(${p1}${p2}.mjs${p1})`;
     });
 
     // Fix relative imports from examples pointing to src (since src is flattened in dist)
@@ -61,7 +61,7 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
                             if (!specifier.endsWith('.mjs')) {
                                 specifier = specifier.replace(/\.(js|ts|can)$/, '') + '.mjs';
                             }
-                            
+
                             const newSpecifier = ts.factory.createStringLiteral(specifier);
                             if (ts.isImportDeclaration(node)) {
                                 return ts.factory.updateImportDeclaration(node, node.modifiers, node.importClause, newSpecifier, node.assertClause);
@@ -86,7 +86,7 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
 /**
  * Default plugins used by the framework transpiler
  */
-export const defaultPlugins = [ 
+export const defaultPlugins = [
     cMountPlugin,
     onUpdatePlugin,
     cIfPlugin,
@@ -100,16 +100,23 @@ export const defaultPlugins = [
  * Determines the output path and ensures the directory exists
  */
 function saveFile(content: string, sourcePath: string, inputRoot: string, outputRoot: string, newExt: string) {
-    const relativePath = path.relative(inputRoot, path.dirname(sourcePath));
-    const outDir = path.join(outputRoot, relativePath);
-    
+    const outPath = getOutputPath(sourcePath, inputRoot, outputRoot, newExt);
+    const outDir = path.dirname(outPath);
+
     if (!fs.existsSync(outDir)) {
         fs.mkdirSync(outDir, { recursive: true });
     }
-    
-    const outName = path.basename(sourcePath, path.extname(sourcePath)) + newExt;
-    const outPath = path.join(outDir, outName);
+
     fs.writeFileSync(outPath, content);
+}
+
+/**
+ * Helper to calculate output path consistently
+ */
+function getOutputPath(sourcePath: string, inputRoot: string, outputRoot: string, newExt: string): string {
+    const relativePath = path.relative(inputRoot, sourcePath);
+    const outRelativePath = relativePath.replace(new RegExp(`${path.extname(sourcePath)}$`), newExt);
+    return path.join(outputRoot, outRelativePath);
 }
 
 interface BuildContext {
@@ -152,19 +159,16 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
     const file = path.basename(fullPath);
     const ext = path.extname(file);
     const stat = fs.statSync(fullPath);
-    
+
     const isSource = (ext === '.can' || (ext === '.ts' && !file.endsWith('.d.ts')));
     const outExt = isSource ? '.mjs' : ext;
-    const outName = path.basename(file, ext) + outExt;
 
-    // Calculate output path
-    const relativePath = path.relative(inputRoot, path.dirname(fullPath));
-    const outDir = path.join(outputRoot, relativePath);
-    const outPath = path.join(outDir, outName);
+    const outPath = getOutputPath(fullPath, inputRoot, outputRoot, outExt);
+    const outDir = path.dirname(outPath);
 
     // Incremental check
     if (fs.existsSync(outPath) && stat.mtimeMs <= fs.statSync(outPath).mtimeMs) {
-        return false; 
+        return false;
     }
 
     if (!fs.existsSync(outDir)) {
@@ -181,7 +185,7 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
 
 
 
-          if (shouldMinify) {
+        if (shouldMinify) {
             try {
                 const minified = transformSync(processedCode, { minify: true, loader: 'js', target: 'es2020' });
                 processedCode = minified.code;
@@ -218,7 +222,7 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
                 sourceMap: true,
                 inlineSources: false,
                 // Ensure shebangs don't cause issues by stripping them safely during parse
-                removeComments: false 
+                removeComments: false
             }
         });
 
@@ -238,7 +242,7 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         }
 
         saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');
-        
+
         if (transpiledOutput.sourceMapText) {
             saveFile(transpiledOutput.sourceMapText, fullPath, inputRoot, outputRoot, '.mjs.map');
         }
@@ -256,25 +260,21 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
 async function processDirectory(dir: string, inputRoot: string, outputRoot: string, minify: boolean, context: BuildContext) {
     if (!fs.existsSync(dir)) return;
 
-    const files = fs.readdirSync(dir);
+    const files = await fs.promises.readdir(dir);
 
-    for (const file of files) {
+    await Promise.all(files.map(async (file) => {
         const fullPath = path.join(dir, file);
-        const stat = fs.statSync(fullPath);
+        const stat = await fs.promises.stat(fullPath);
 
         if (stat.isDirectory()) {
-            await processDirectory(fullPath, inputRoot, outputRoot, minify, context);
-            continue;
+            return processDirectory(fullPath, inputRoot, outputRoot, minify, context);
         }
-        
+
         context.current++;
         renderProgressBar(context.current, context.total, `Processing ${file}`);
-        
-        // Process the file using the unified buildFile function
         const built = await buildFile(fullPath, inputRoot, outputRoot, minify);
-        
         if (built) context.built++; else context.skipped++;
-    }
+    }));
 }
 
 export async function build(targets?: string[], minify: boolean = false) {
@@ -303,11 +303,11 @@ export async function build(targets?: string[], minify: boolean = false) {
     const hasTargets = targets && targets.length > 0;
 
     const context: BuildContext = {
-        total: hasTargets 
+        total: hasTargets
             ? targets!.reduce((sum, t) => {
                 const p = path.resolve(cwd, t);
                 return sum + (fs.existsSync(p) ? (fs.statSync(p).isDirectory() ? countFiles(p) : 1) : 0);
-              }, 0)
+            }, 0)
             : (countFiles(srcDir) + countFiles(examplesDir) + countFiles(apiDir) + countFiles(buildDir)),
         current: 0,
         built: 0,
@@ -322,7 +322,7 @@ export async function build(targets?: string[], minify: boolean = false) {
             if (!fs.existsSync(fullPath)) continue;
 
             const isDir = fs.statSync(fullPath).isDirectory();
-            
+
             let inputRoot = '';
             let outputRoot = '';
             if (fullPath.startsWith(srcDir)) { inputRoot = srcDir; outputRoot = distDir; }
@@ -382,7 +382,7 @@ export async function build(targets?: string[], minify: boolean = false) {
         let htmlContent = fs.readFileSync(exampleIndexHtml, 'utf-8');
         const exampleOutDir = path.join(distDir, 'examples');
         if (!fs.existsSync(exampleOutDir)) fs.mkdirSync(exampleOutDir, { recursive: true });
-        
+
         // Ensure the example entry point (main.mjs or index.mjs) is injected
         if (!htmlContent.includes('.mjs')) {
             htmlContent = htmlContent.replace('</body>', '<script type="module" src="./main.mjs"></script></body>');

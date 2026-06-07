@@ -42,7 +42,7 @@ component AdvancedUI {
     });
 
     var template = `
-    
+        
         <div class="advanced-ui-widget" style="display: {{isOpen.value ? 'block' : 'none'}}">
             <div class="panel" c-ref="panelRef" style="transform: translate({{x}}px, {{y}}px); width: {{width}}px; height: {{isMinimized.value ? 'auto' : height.value + 'px'}}">
                 <div class="panel-header" style="cursor: {{isDragging.value ? 'grabbing' : 'grab'}}">

@@ -114,10 +114,13 @@ function handleStyle(el: HTMLElement, val: any) {
             styleObj[key] = val[key];
         }
         // Remove styles that are no longer in the object
-        for (let i = 0; i < el.style.length; i++) {
-            const key = el.style[i];
-            if (!(key in val)) {
-                el.style.removeProperty(key);
+        const valKeys = Object.keys(val);
+        for (let i = el.style.length - 1; i >= 0; i--) {
+            const name = el.style[i]; // This is kebab-case
+            // Create a camelCase version for comparison
+            const camelName = name.replace(/-(\w)/g, (_, c) => c.toUpperCase());
+            if (!valKeys.includes(name) && !valKeys.includes(camelName)) {
+                el.style.removeProperty(name);
             }
         }
     }

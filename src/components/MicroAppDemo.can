@@ -18,6 +18,7 @@ component MicroAppDemo {
 
     var template = `
         <div class="micro-frame">
+        
             <div class="header">
                 <span class="badge">Micro-App: {{title}}</span>
                 <button class="reload-btn" onclick="() => this.reload()">&#x21bb;</button>

@@ -2,7 +2,7 @@
   "name": "can-language-support",
   "displayName": "Can Framework Official Tooling",
   "description": "Language support and themes for the Can Framework",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "publisher": "can-framework",
   "icon": "icons/can.png",
   "license": "MIT",
@@ -21,8 +21,8 @@
   "scripts": {
     "vscode:prepublish": "npm run clean && npm run build",
     "clean": "npx shx rm -rf out && npx shx rm -rf *.vsix",
-    "build": "esbuild extension.ts server.ts --bundle --outdir=out --external:vscode --external:esbuild --format=cjs --platform=node",
-    "watch": "esbuild extension.ts server.ts --bundle --outdir=out --external:vscode --external:esbuild --format=cjs --platform=node --watch",
+    "build": "esbuild extension.ts server.ts --bundle --outdir=out --external:vscode --external:esbuild --format=cjs --platform=node --minify --sourcemap --define:import.meta.url=import_meta_url_shim --banner:js=\"const import_meta_url_shim = require('url').pathToFileURL(__filename).href;\"",
+    "watch": "esbuild extension.ts server.ts --bundle --outdir=out --external:vscode --external:esbuild --format=cjs --platform=node --watch --sourcemap --define:import.meta.url=import_meta_url_shim --banner:js=\"const import_meta_url_shim = require('url').pathToFileURL(__filename).href;\"",
     "compile": "tsc -p ./ --noEmit"
   },
   "dependencies": {
@@ -68,7 +68,11 @@
         "embeddedLanguages": {
           "text.html.basic": "html",
           "source.ts": "typescript",
-          "source.css": "css"
+          "source.js": "javascript",
+          "source.css": "css",
+          "meta.embedded.block.html": "html",
+          "meta.embedded.block.typescript": "typescript",
+          "meta.embedded.block.css": "css"
         }
       }
     ],
@@ -92,16 +96,9 @@
         "path": "./snippets/can.code-snippets"
       }
     ],
-    "configuration": {
-      "title": "Can Framework Tooling",
-      "properties": {
-        "emmet.includeLanguages": {
-          "type": "object",
-          "default": {
-            "can": "html"
-          },
-          "description": "Map the Can template extensions directly into the Emmet syntax parser layout core."
-        }
+    "configurationDefaults": {
+      "emmet.includeLanguages": {
+        "can": "html"
       }
     }
   }

@@ -12,10 +12,15 @@ import {
     DiagnosticSeverity,
     DocumentHighlight,
     DocumentHighlightKind,
+    FoldingRange,
+    FoldingRangeKind,
     ProposedFeatures,
     InitializeParams,
     TextDocumentSyncKind,
     InitializeResult,
+    DocumentSymbolParams,
+    DocumentSymbol,
+    SymbolKind,
     CompletionItem,
     CompletionItemKind,
     LinkedEditingRanges,
@@ -27,6 +32,8 @@ import {
     DocumentFormattingParams,
     Definition,
     Location,
+    InlayHint,
+    InlayHintKind,
     CompletionList,
     SemanticTokensBuilder,
     CodeAction,
@@ -38,13 +45,69 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import { fileURLToPath, pathToFileURL } from 'url';
 
 import { transpile } from '../src/compiler/codegen';
-import { defaultPlugins } from '../src/cli/build';
+import { cMountPlugin } from '../src/compiler/directives/c-mount-plugin';
+import { onUpdatePlugin } from '../src/compiler/directives/on-update';
+import { cIfPlugin } from '../src/compiler/directives/c-if';
+import { cForPlugin } from '../src/compiler/directives/c-for';
+import { cBindPlugin } from '../src/compiler/directives/c-bind';
+import { cModelPlugin } from '../src/compiler/directives/c-model';
+import { cShowPlugin } from '../src/compiler/directives/c-show';
 
 // Create a connection for the server, using Node's IPC as a transport.
 const connection = createConnection(ProposedFeatures.all);
 
 // Create a simple text document manager.
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+
+const defaultPlugins = [
+    cMountPlugin,
+    onUpdatePlugin,
+    cIfPlugin,
+    cForPlugin,
+    cBindPlugin,
+    cModelPlugin,
+    cShowPlugin
+];
+
+/**
+ * Safely converts a file URI to a machine-local file path.
+ */
+function getPathFromUri(uri: string): string {
+    try {
+        return fileURLToPath(uri);
+    } catch (e) {
+        // Manual fallback for environments where fileURLToPath fails
+        let sourcePath = uri.replace(/^file:\/\/\/?/, '');
+        if (process.platform === 'win32' && !/^[a-zA-Z]:/.test(sourcePath)) {
+            sourcePath = sourcePath.replace(/^\//, '');
+        }
+        return sourcePath;
+        //return uri.startsWith('file://') ? fileURLToPath(uri) : uri;
+    }
+}
+
+/**
+ * Semantic Token Legend definition.
+ * Centrally defined to ensure indices match between connection.onInitialize and the token collector.
+ */
+const tokenLegend = {
+    types: ['keyword', 'variable', 'function', 'parameter', 'property', 'class', 'macro'],
+    modifiers: ['declaration', 'readonly', 'reactive']
+};
+
+const tokenTypeIndex = Object.fromEntries(
+    tokenLegend.types.map((t, i) => [t, i])
+) as Record<string, number>;
+
+const tokenModifierIndex = Object.fromEntries(
+    tokenLegend.modifiers.map((m, i) => [m, i])
+) as Record<string, number>;
+
+const Mod = {
+    declaration: 1 << tokenModifierIndex.declaration,
+    readonly: 1 << tokenModifierIndex.readonly,
+    reactive: 1 << tokenModifierIndex.reactive
+};
 
 connection.onInitialize((params: InitializeParams) => {
     const result: InitializeResult = {
@@ -64,14 +127,20 @@ connection.onInitialize((params: InitializeParams) => {
             documentHighlightProvider: true,
             // Tell the client that this server supports "Go to Definition"
             definitionProvider: true,
+            // Support Outline view and Breadcrumbs
+            documentSymbolProvider: true,
             linkedEditingRangeProvider: true,
             semanticTokensProvider: {
                 legend: {
-                    tokenTypes: ['keyword', 'variable', 'function', 'parameter', 'property', 'class', 'macro'],
-                    tokenModifiers: ['declaration', 'readonly']
+                    tokenTypes: tokenLegend.types,
+                    tokenModifiers: tokenLegend.modifiers
                 },
                 full: true
-            }
+            },
+            // Support for collapsing blocks
+            foldingRangeProvider: true,
+            // Support for inline reactive type labels
+            inlayHintProvider: true
         }
     };
     return result;
@@ -86,12 +155,12 @@ connection.onHover((params: TextDocumentPositionParams) => {
 
     const text = document.getText();
     const offset = document.offsetAt(params.position);
-    
+
     // Find the word at the current position
-    const wordMatch = text.slice(0, offset).match(/([@a-zA-Z0-9_-]+)$/);
-    const wordRest = text.slice(offset).match(/^([a-zA-Z0-9_-]+)/);
+    const wordMatch = text.slice(0, offset).match(/([@$a-zA-Z0-9_.-]+)$/);
+    const wordRest = text.slice(offset).match(/^([$a-zA-Z0-9_.-]+)/);
     let word = (wordMatch ? wordMatch[0] : '') + (wordRest ? wordRest[0] : '');
-    
+
     // Normalize word for lookup
     const lookupWord = word.startsWith('@') ? word.slice(1) : word;
 
@@ -103,6 +172,7 @@ connection.onHover((params: TextDocumentPositionParams) => {
         'effect': '**Side Effect**\n\nRuns a function and automatically re-runs it when reactive dependencies change.',
         'c-if': '**Directive: c-if (Conditional Rendering)**\n\nConditionally renders an element by adding or removing it from the DOM. Use `c-if` for content that doesn\'t change often, as it has a higher toggle cost but lower initial cost if the condition is false.',
         'c-else-if': '**Directive: c-else-if**\n\nDenotes the "else if block" for `c-if`. Must be a sibling of `c-if` or another `c-else-if`.',
+        'props': '**Component Props**\n\nAccess the reactive attributes passed to the component. In `<script>`, use `props.count`. In templates, you can use them directly.',
         'c-else': '**Directive: c-else**\n\nDenotes the final "else block" for `c-if`. Must be a sibling of `c-if` or `c-else-if`.',
         'c-for': '**Directive: c-for**\n\nRenders a list of items based on an array. Syntax: `item in items`.',
         'c-model': '**Directive: c-model**\n\nEstablishes two-way data binding on form inputs.',
@@ -122,6 +192,28 @@ connection.onHover((params: TextDocumentPositionParams) => {
 });
 
 /**
+ * Extracts all declared variables and functions from a script.
+ */
+function getScriptDeclarations(text: string): Set<string> {
+    const declarations = new Set<string>();
+    // Standard var/let/const/function
+    const declRegex = /\b(?:var|let|const|function)\s+([a-zA-Z0-9_$]+)/g;
+    let match;
+    while ((match = declRegex.exec(text)) !== null) {
+        if (match[1]) declarations.add(match[1]);
+    }
+    // Destructuring
+    const destructRegex = /(?:var|let|const)\s*\{\s*([^}]+)\s*\}\s*=/g;
+    while ((match = destructRegex.exec(text)) !== null) {
+        match[1].split(',').forEach(v => {
+            const name = v.split(':')[0].trim();
+            if (name) declarations.add(name);
+        });
+    }
+    return declarations;
+}
+
+/**
  * Completion Logic: Provides intelligent suggestions based on context.
  */
 connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] | CompletionList | null => {
@@ -136,7 +228,7 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
     const inStyle = prefix.lastIndexOf('<style') > prefix.lastIndexOf('</style>');
     if (inStyle) {
         const cssProps = [
-            'color', 'background', 'margin', 'padding', 'display', 'flex', 'opacity', 
+            'color', 'background', 'margin', 'padding', 'display', 'flex', 'opacity',
             'width', 'height', 'border', 'font-family', 'font-size', 'position', 'cursor'
         ];
 
@@ -164,6 +256,17 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
     if (inTemplate) {
         const lastOpenBracket = prefix.lastIndexOf('<');
         const lastCloseBracket = prefix.lastIndexOf('>');
+
+        // 2.0.1 Suggest Script Variables inside Interpolation {{ | }}
+        const interpMatch = prefix.match(/\{\{\s*([a-zA-Z0-9_$]*)$/);
+        if (interpMatch) {
+            const scriptVars = getScriptDeclarations(text);
+            return Array.from(scriptVars).map(v => ({
+                label: v,
+                kind: CompletionItemKind.Variable,
+                detail: 'Component Signal/Variable'
+            }));
+        }
 
         // 2.0 Suggest Closing Tag: </|
         if (prefix.endsWith('</')) {
@@ -205,7 +308,7 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
             // 2.2 Attribute/Directive completion: <div |
             const attrValueMatch = textAfterOpen.match(/([a-z-]+)=["']([^"']*)$/);
             const inAttrValue = !!attrValueMatch;
-            
+
             if (inAttrValue && attrValueMatch) {
                 const attrNameMatch = attrValueMatch[1].match(/([a-z-]+)$/);
                 if (attrNameMatch) {
@@ -221,7 +324,7 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
                 }
                 return [];
             }
-            
+
             if (textAfterOpen.includes(' ')) {
                 const globalAttrs = [
                     { label: 'class', detail: 'CSS classes' },
@@ -278,8 +381,8 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
 
         // 2.3 Between tags or starting a tag: suggest HTML elements as snippets
         const elements = [
-            'div', 'span', 'p', 'button', 'input', 'h1', 'h2', 'h3', 'ul', 'li', 'a', 
-            'section', 'article', 'nav', 'header', 'footer', 'main', 'aside', 'form', 
+            'div', 'span', 'p', 'button', 'input', 'h1', 'h2', 'h3', 'ul', 'li', 'a',
+            'section', 'article', 'nav', 'header', 'footer', 'main', 'aside', 'form',
             'label', 'select', 'option', 'textarea', 'img', 'table', 'tr', 'td', 'slot'
         ];
 
@@ -294,8 +397,8 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
 
     // 3. Script Context
     return [
-        { 
-            label: 'component-boilerplate', 
+        {
+            label: 'component-boilerplate',
             kind: CompletionItemKind.Snippet,
             detail: 'Create a new Can component',
             insertText: [
@@ -310,8 +413,8 @@ connection.onCompletion((params: TextDocumentPositionParams): CompletionItem[] |
             insertTextFormat: InsertTextFormat.Snippet
         },
         { label: 'component', kind: CompletionItemKind.Keyword },
-        { 
-            label: 'import', 
+        {
+            label: 'import',
             kind: CompletionItemKind.Keyword,
             detail: 'Import a module dependency',
             insertText: "import { ${1:Member} } from '${2:./module}';",
@@ -334,16 +437,142 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
 });
 
 /**
- * Linked Editing: Supports auto-renaming of HTML tags.
+ * Document Symbols: Populates the Outline view and Breadcrumbs.
  */
-connection.languages.onLinkedEditingRange((params: LinkedEditingRangeParams): LinkedEditingRanges | null => {
+connection.onDocumentSymbol((params: DocumentSymbolParams): DocumentSymbol[] => {
     const document = documents.get(params.textDocument.uri);
-    if (!document) return null;
+    if (!document) return [];
 
     const text = document.getText();
-    const offset = document.offsetAt(params.position);
+    const lines = text.split(/\r?\n/);
+    const symbols: DocumentSymbol[] = [];
 
-    // 1. Identify the tag name under the cursor
+    // 1. Component Name
+    const componentMatch = text.match(/component\s+([A-Za-z0-9_]+)/);
+    if (componentMatch) {
+        const name = componentMatch[1];
+        const range = Range.create(document.positionAt(componentMatch.index!), document.positionAt(componentMatch.index! + componentMatch[0].length));
+        symbols.push(DocumentSymbol.create(name, 'Can Component', SymbolKind.Class, range, range));
+    }
+
+    // 2. Signals and Variables
+    const varRegex = /\b(?:var|let|const)\s+([a-zA-Z0-9_$]+)\s*=/g;
+    let match;
+    while ((match = varRegex.exec(text)) !== null) {
+        const name = match[1];
+        const pos = document.positionAt(match.index);
+        const range = Range.create(pos, document.positionAt(match.index + match[0].length));
+
+        const lineText = lines[pos.line] || '';
+        const kind = (lineText.includes('signal(') || lineText.includes('computed(')) ? SymbolKind.Variable : SymbolKind.Field;
+        symbols.push(DocumentSymbol.create(name, '', kind, range, range));
+    }
+
+    // 3. Functions
+    const funcRegex = /\bfunction\s+([a-zA-Z0-9_$]+)/g;
+    while ((match = funcRegex.exec(text)) !== null) {
+        const name = match[1];
+        const range = Range.create(document.positionAt(match.index), document.positionAt(match.index + match[0].length));
+        symbols.push(DocumentSymbol.create(name, '', SymbolKind.Function, range, range));
+    }
+
+    // 4. Template Block
+    const templateRegex = /template\s*[:=]\s*`/g;
+    match = templateRegex.exec(text);
+    if (match) {
+        const range = Range.create(document.positionAt(match.index), document.positionAt(match.index + 8));
+        symbols.push(DocumentSymbol.create('template', 'UI Structure', SymbolKind.Module, range, range));
+    }
+
+    return symbols;
+});
+
+/**
+ * Folding Ranges: Allows collapsing <style> and template blocks.
+ */
+connection.onFoldingRanges((params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+
+    const text = document.getText();
+    const ranges: FoldingRange[] = [];
+
+    // 1. Fold <style> blocks
+    const styleRegex = /<style[\s\S]*?>([\s\S]*?)<\/style>/g;
+    let match;
+    while ((match = styleRegex.exec(text)) !== null) {
+        const startPos = document.positionAt(match.index);
+        const endPos = document.positionAt(match.index + match[0].length);
+        if (startPos.line < endPos.line) {
+            ranges.push({
+                startLine: startPos.line,
+                endLine: endPos.line,
+                kind: FoldingRangeKind.Region
+            });
+        }
+    }
+
+    // 2. Fold template assignments
+    const templateRegex = /template\s*[:=]\s*`([\s\S]*?)`/g;
+    while ((match = templateRegex.exec(text)) !== null) {
+        const startPos = document.positionAt(match.index);
+        const endPos = document.positionAt(match.index + match[0].length);
+        if (startPos.line < endPos.line) {
+            ranges.push({
+                startLine: startPos.line,
+                endLine: endPos.line,
+                kind: FoldingRangeKind.Region
+            });
+        }
+    }
+
+    return ranges;
+});
+
+/**
+ * Inlay Hints: Provides reactive labels for signals and computed values.
+ */
+connection.languages.inlayHint.on((params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return [];
+
+    const text = document.getText();
+    const hints: InlayHint[] = [];
+
+    // Find signal declarations: var x = signal(...)
+    const signalRegex = /\b(?:var|let|const)\s+([a-zA-Z0-9_$]+)\s*=\s*signal\(/g;
+    let match;
+    while ((match = signalRegex.exec(text)) !== null) {
+        const nameEndOffset = match.index + match[0].indexOf(match[1]) + match[1].length;
+        hints.push({
+            position: document.positionAt(nameEndOffset),
+            label: ': Signal',
+            kind: InlayHintKind.Type,
+            paddingLeft: true
+        });
+    }
+
+    // Find computed declarations: var x = computed(...)
+    const computedRegex = /\b(?:var|let|const)\s+([a-zA-Z0-9_$]+)\s*=\s*computed\(/g;
+    while ((match = computedRegex.exec(text)) !== null) {
+        const nameEndOffset = match.index + match[0].indexOf(match[1]) + match[1].length;
+        hints.push({
+            position: document.positionAt(nameEndOffset),
+            label: ': Computed',
+            kind: InlayHintKind.Type,
+            paddingLeft: true
+        });
+    }
+
+    return hints;
+});
+
+/**
+ * Shared logic to find a tag at the current position and its matching pair.
+ */
+function findMatchingTagPair(document: TextDocument, position: any) {
+    const text = document.getText();
+    const offset = document.offsetAt(position);
     const prefix = text.slice(0, offset);
     const openMatch = prefix.match(/<([a-zA-Z0-9-]*)$/);
     const closeMatch = prefix.match(/<\/([a-zA-Z0-9-]*)$/);
@@ -362,22 +591,18 @@ connection.languages.onLinkedEditingRange((params: LinkedEditingRangeParams): Li
     }
 
     const restMatch = text.slice(offset).match(/^[a-zA-Z0-9-]*/);
-    const tagName = (isClosing ? closeMatch![1] : openMatch![1]) + (restMatch ? restMatch[0] : "");
+    const tagName = (isClosing ? (closeMatch ? closeMatch[1] : '') : (openMatch ? openMatch[1] : '')) + (restMatch ? restMatch[0] : "");
     if (!tagName) return null;
 
-    // Do not link void elements (they have no closing tag)
     const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
     if (voidElements.includes(tagName.toLowerCase())) return null;
 
-    const ranges: Range[] = [];
-    // Add the current tag name range
-    ranges.push({
+    const ranges: Range[] = [{
         start: document.positionAt(nameStartOffset),
         end: document.positionAt(nameStartOffset + tagName.length)
-    });
+    }];
 
     if (isClosing) {
-        // Search backwards for the corresponding opening tag
         let depth = 0;
         let i = nameStartOffset - 2;
         while (i >= 0) {
@@ -393,7 +618,6 @@ connection.languages.onLinkedEditingRange((params: LinkedEditingRangeParams): Li
             i--;
         }
     } else {
-        // Search forwards for the corresponding closing tag
         let depth = 0;
         let i = nameStartOffset + tagName.length;
         while (i < text.length) {
@@ -409,8 +633,17 @@ connection.languages.onLinkedEditingRange((params: LinkedEditingRangeParams): Li
             i++;
         }
     }
+    return ranges.length === 2 ? ranges : null;
+}
 
-    return ranges.length === 2 ? { ranges } : null;
+/**
+ * Linked Editing: Supports auto-renaming of HTML tags.
+ */
+connection.languages.onLinkedEditingRange((params: LinkedEditingRangeParams): LinkedEditingRanges | null => {
+    const document = documents.get(params.textDocument.uri);
+    if (!document) return null;
+    const ranges = findMatchingTagPair(document, params.position);
+    return ranges ? { ranges } : null;
 });
 
 /**
@@ -419,81 +652,8 @@ connection.languages.onLinkedEditingRange((params: LinkedEditingRangeParams): Li
 connection.onDocumentHighlight((params: TextDocumentPositionParams): DocumentHighlight[] | null => {
     const document = documents.get(params.textDocument.uri);
     if (!document) return null;
-
-    const text = document.getText();
-    const offset = document.offsetAt(params.position);
-
-    // 1. Identify the tag name under the cursor (reuse logic from linked editing)
-    const prefix = text.slice(0, offset);
-    const openMatch = prefix.match(/<([a-zA-Z0-9-]*)$/);
-    const closeMatch = prefix.match(/<\/([a-zA-Z0-9-]*)$/);
-
-    let isClosing = false;
-    let nameStartOffset = -1;
-
-    if (closeMatch) {
-        isClosing = true;
-        nameStartOffset = offset - closeMatch[1].length;
-    } else if (openMatch) {
-        isClosing = false;
-        nameStartOffset = offset - openMatch[1].length;
-    } else {
-        return null;
-    }
-
-    const restMatch = text.slice(offset).match(/^[a-zA-Z0-9-]*/);
-    const tagName = (isClosing ? closeMatch![1] : openMatch![1]) + (restMatch ? restMatch[0] : "");
-    if (!tagName) return null;
-
-    const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
-    if (voidElements.includes(tagName.toLowerCase())) return null;
-
-    const highlights: DocumentHighlight[] = [];
-    
-    // Add the current tag name range
-    highlights.push({
-        range: {
-            start: document.positionAt(nameStartOffset),
-            end: document.positionAt(nameStartOffset + tagName.length)
-        },
-        kind: DocumentHighlightKind.Text
-    });
-
-    if (isClosing) {
-        // Search backwards for the corresponding opening tag
-        let depth = 0;
-        let i = nameStartOffset - 2;
-        while (i >= 0) {
-            if (text.slice(i, i + tagName.length + 1) === `<${tagName}` && !/[a-zA-Z0-9-]/.test(text[i + tagName.length + 1] || "")) {
-                if (depth === 0) {
-                    highlights.push({ range: { start: document.positionAt(i + 1), end: document.positionAt(i + 1 + tagName.length) }, kind: DocumentHighlightKind.Text });
-                    break;
-                }
-                depth--;
-            } else if (text.slice(i, i + tagName.length + 2) === `</${tagName}` && !/[a-zA-Z0-9-]/.test(text[i + tagName.length + 2] || "")) {
-                depth++;
-            }
-            i--;
-        }
-    } else {
-        // Search forwards for the corresponding closing tag
-        let depth = 0;
-        let i = nameStartOffset + tagName.length;
-        while (i < text.length) {
-            if (text.slice(i, i + tagName.length + 2) === `</${tagName}` && !/[a-zA-Z0-9-]/.test(text[i + tagName.length + 2] || "")) {
-                if (depth === 0) {
-                    highlights.push({ range: { start: document.positionAt(i + 2), end: document.positionAt(i + 2 + tagName.length) }, kind: DocumentHighlightKind.Text });
-                    break;
-                }
-                depth--;
-            } else if (text.slice(i, i + tagName.length + 1) === `<${tagName}` && !/[a-zA-Z0-9-]/.test(text[i + tagName.length + 1] || "")) {
-                depth++;
-            }
-            i++;
-        }
-    }
-
-    return highlights.length === 2 ? highlights : null;
+    const ranges = findMatchingTagPair(document, params.position);
+    return ranges ? ranges.map(range => ({ range, kind: DocumentHighlightKind.Text })) : null;
 });
 
 /**
@@ -513,20 +673,9 @@ connection.onDefinition((params: TextDocumentPositionParams): Location | Locatio
     const match = currentLine.match(importRegex);
 
     if (match && match[1]) {
-        const importTarget = match[1]; 
-        
-        // Convert URI token references safely to a real machine file path
-        let sourcePath = '';
-        try {
-            sourcePath = fileURLToPath(document.uri);
-        } catch (e) {
-            // Fallback for edge-case URI configurations
-            sourcePath = document.uri.replace(/^file:\/\/\/?/, '');
-            if (process.platform === 'win32' && !sourcePath.match(/^[a-zA-Z]:/)) {
-                sourcePath = sourcePath.replace(/^\//, '');
-            }
-        }
-        
+        const importTarget = match[1];
+
+        const sourcePath = getPathFromUri(document.uri);
         const currentDir = path.dirname(sourcePath);
         let targetAbsolutePath = path.resolve(currentDir, importTarget);
 
@@ -556,7 +705,7 @@ connection.onDefinition((params: TextDocumentPositionParams): Location | Locatio
                 }
             }
         }
-        
+
         if (!workingFile) {
             for (const ext of ['.ts', '/index.ts', '.can', '/index.can', '.js', '/index.js']) {
                 const guessingPath = targetAbsolutePath + ext;
@@ -575,13 +724,13 @@ connection.onDefinition((params: TextDocumentPositionParams): Location | Locatio
 
     // 2. Resolve Definitions (Internal Signals/Methods or Components)
     const offset = document.offsetAt(params.position);
-    const wordMatchAtPos = currentLine.slice(0, position.character).match(/[@a-zA-Z0-9_-]+$/);
-    const wordRestAtPos = currentLine.slice(position.character).match(/^[a-zA-Z0-9_-]+/);
+    const wordMatchAtPos = currentLine.slice(0, position.character).match(/[@$a-zA-Z0-9_.-]+$/);
+    const wordRestAtPos = currentLine.slice(position.character).match(/^[$a-zA-Z0-9_.-]+/);
     const word = (wordMatchAtPos ? wordMatchAtPos[0] : '') + (wordRestAtPos ? wordRestAtPos[0] : '');
 
     if (word) {
         const cleanWord = word.startsWith('@') ? word.slice(1) : word;
-        const declarationRegex = new RegExp(`\\b(?:var|let|const|function)\\s+${cleanWord}\\b|\\b${cleanWord}\\s*\\(`, 'g');
+        const declarationRegex = new RegExp(`(?:\\b(?:var|let|const|function)\\s+|\\b)${cleanWord}\\b(?=\\s*[=(]|$)`, 'g');
         let declMatch;
         while ((declMatch = declarationRegex.exec(text)) !== null) {
             if (declMatch.index <= offset && offset <= declMatch.index + declMatch[0].length) continue;
@@ -591,19 +740,11 @@ connection.onDefinition((params: TextDocumentPositionParams): Location | Locatio
             });
         }
 
-        const componentName = word.includes('-') 
+        const componentName = word.includes('-')
             ? word.split('-').map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('')
             : word;
-        
-        let sourcePath = '';
-        try {
-            sourcePath = fileURLToPath(document.uri);
-        } catch (e) {
-            sourcePath = document.uri.replace(/^file:\/\/\/?/, '');
-            if (process.platform === 'win32' && !sourcePath.match(/^[a-zA-Z]:/)) {
-                sourcePath = sourcePath.replace(/^\//, '');
-            }
-        }
+
+        const sourcePath = getPathFromUri(document.uri);
         const dir = path.dirname(sourcePath);
         for (const ext of ['.can', '.ts', '.js']) {
             const possibleFile = path.join(dir, `${componentName}${ext}`);
@@ -702,45 +843,115 @@ connection.languages.semanticTokens.on((params) => {
 
     const text = document.getText();
     const builder = new SemanticTokensBuilder();
-    const tokens: { line: number, char: number, length: number, type: number, mod: number }[] = [];
+    const tokens: { line: number, char: number, length: number, type: number, mod: number, offset: number }[] = [];
 
-    // 1. Signals: @name
-    const signalRegex = /@([a-zA-Z0-9_]+)/g;
+    // Metadata map to track variables/functions for usage highlighting
+    const nameToTokenInfo = new Map<string, { type: number, mod: number }>();
+
+    // Pre-seed common framework identifiers
+    nameToTokenInfo.set('this', { type: tokenTypeIndex.keyword, mod: 0 });
+    nameToTokenInfo.set('props', { type: tokenTypeIndex.variable, mod: Mod.reactive });
+    ['signal', 'computed', 'effect', 'onMount', 'onUnmounted', 'onUpdated'].forEach(fn => {
+        nameToTokenInfo.set(fn, { type: tokenTypeIndex.function, mod: Mod.reactive });
+    });
+
+    // 1. Pass: Declarations (Component name, var, let, const, function)
+    const componentRegex = /\bcomponent\s+([A-Za-z0-9_]+)/g;
     let match;
-    while ((match = signalRegex.exec(text)) !== null) {
-        const pos = document.positionAt(match.index);
-        tokens.push({ line: pos.line, char: pos.character, length: match[0].length, type: 1, mod: 0 }); // variable
-    }
-
-    // 2. Directives: c-if, c-for, animate:fade etc.
-    const directiveRegex = /\b(c-[a-z-]+|animate:[a-z-]+)(?==|[\s>])/g;
-    while ((match = directiveRegex.exec(text)) !== null) {
-        const pos = document.positionAt(match.index);
-        tokens.push({ line: pos.line, char: pos.character, length: match[0].length, type: 6, mod: 0 }); // macro
-    }
-
-    // 3. Components: <MyComponent
-    const componentRegex = /<(\/?[A-Z][a-zA-Z0-9]*)/g;
     while ((match = componentRegex.exec(text)) !== null) {
-        const isClosing = match[1].startsWith('/');
-        const name = isClosing ? match[1].slice(1) : match[1];
-        const startOffset = match.index + (isClosing ? 2 : 1);
+        const name = match[1];
+        const nameOffset = match.index + match[0].indexOf(name);
+        const pos = document.positionAt(nameOffset);
+        tokens.push({ line: pos.line, char: pos.character, length: name.length, type: tokenTypeIndex.class, mod: Mod.declaration, offset: nameOffset });
+        nameToTokenInfo.set(name, { type: tokenTypeIndex.class, mod: 0 });
+    }
+
+    const declRegex = /\b(var|let|const|function)\s+([a-zA-Z0-9_$]+)\b/g;
+    while ((match = declRegex.exec(text)) !== null) {
+        const kind = match[1];
+        const name = match[2];
+        const nameOffset = match.index + match[0].indexOf(name);
+        const pos = document.positionAt(nameOffset);
+
+        let type = kind === 'function' ? tokenTypeIndex.function : tokenTypeIndex.variable;
+        let mod = Mod.declaration;
+        if (kind === 'const') mod |= Mod.readonly;
+
+        // Lookahead to check if this is a reactive signal/computed assignment
+        const rest = text.slice(match.index + match[0].length, match.index + match[0].length + 50);
+        if (/\s*=\s*(signal|computed)\(/.test(rest)) {
+            mod |= Mod.reactive;
+        }
+
+        tokens.push({ line: pos.line, char: pos.character, length: name.length, type, mod, offset: nameOffset });
+        // Track for usages (stripping the declaration bit)
+        nameToTokenInfo.set(name, { type, mod: mod & ~Mod.declaration });
+    }
+
+    // 2. Pass: Tracked Name Usages (consistent coloring for signals/props/etc)
+    const usageRegex = /\b([a-zA-Z0-9_$]+)\b/g;
+    while ((match = usageRegex.exec(text)) !== null) {
+        const word = match[1];
+        const info = nameToTokenInfo.get(word);
+        if (info && !['var', 'let', 'const', 'function', 'component'].includes(word)) {
+            const pos = document.positionAt(match.index);
+            tokens.push({ line: pos.line, char: pos.character, length: word.length, type: info.type, mod: info.mod, offset: match.index });
+        }
+    }
+
+    // 3. Pass: Signals and Event Shorthands (@name)
+    const signalRegex = /(?:\s|^|["'>(])@([a-zA-Z0-9_$]+)\b/g;
+    while ((match = signalRegex.exec(text)) !== null) {
+        const startOffset = match.index + (match[0].indexOf('@'));
         const pos = document.positionAt(startOffset);
-        tokens.push({ line: pos.line, char: pos.character, length: name.length, type: 5, mod: 0 }); // class
+        tokens.push({ line: pos.line, char: pos.character, length: match[1].length + 1, type: tokenTypeIndex.variable, mod: Mod.reactive, offset: startOffset });
     }
 
-    // 4. Reactive framework helpers (signal, computed, effect, etc.)
-    const reactiveKeywords = /\b(signal|computed|effect|useDraggable|defineCustomElement)\b/g;
-    while ((match = reactiveKeywords.exec(text)) !== null) {
+    // 4. Pass: Directives (c-if, animate:fade, etc)
+    const directiveRegex = /(?:\s|^|["'>(])(c-[a-zA-Z0-9_-]+|animate:[a-zA-Z0-9_-]+|:[a-zA-Z0-9_-]+)(?=[.=: \/>])/g;
+    while ((match = directiveRegex.exec(text)) !== null) {
+        const startOffset = match.index + match[0].indexOf(match[1]);
+        const pos = document.positionAt(startOffset);
+        tokens.push({ line: pos.line, char: pos.character, length: match[1].length, type: tokenTypeIndex.macro, mod: 0, offset: startOffset });
+    }
+
+    // 5. Pass: Property Access (.value, .item)
+    const propertyRegex = /(?<=\.)[a-zA-Z_$][a-zA-Z0-9_$]*\b(?![-])/g;
+    while ((match = propertyRegex.exec(text)) !== null) {
         const pos = document.positionAt(match.index);
-        tokens.push({ line: pos.line, char: pos.character, length: match[0].length, type: 6, mod: 0 }); // macro
+        tokens.push({ line: pos.line, char: pos.character, length: match[0].length, type: tokenTypeIndex.property, mod: 0, offset: match.index });
     }
 
-    // Sort tokens by line and character
-    tokens.sort((a, b) => a.line !== b.line ? a.line - b.line : a.char - b.char);
+    // Sort by offset, then by length (longest first) to ensure outer tokens win over partial inner matches
+    tokens.sort((a, b) => {
+        if (a.offset !== b.offset) {
+            return a.offset - b.offset;
+        }
+        return b.length - a.length;
+    });
 
+    // Filter out overlapping tokens to prevent partial word coloring
+    const filteredTokens = [];
+    let lastEndOffset = -1;
     for (const t of tokens) {
-        builder.push(t.line, t.char, t.length, t.type, t.mod);
+        // Ensure this token starts after the previous one ends
+        if (t.offset >= lastEndOffset) {
+            filteredTokens.push(t);
+            lastEndOffset = t.offset + t.length;
+        }
+    }
+
+    // Re-sort by line/char for delta builder
+    filteredTokens.sort((a, b) => a.line !== b.line ? a.line - b.line : a.char - b.char);
+
+    let lastLine = 0;
+    let lastChar = 0;
+    for (const t of filteredTokens) {
+        const deltaLine = t.line - lastLine;
+        const deltaChar = deltaLine === 0 ? t.char - lastChar : t.char;
+        builder.push(deltaLine, deltaChar, t.length, t.type, t.mod);
+        lastLine = t.line;
+        lastChar = t.char;
     }
 
     return builder.build();
@@ -800,28 +1011,16 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
     // 2. VARIABLE USAGE VALIDATION (Template vs Script)
     // Only run if we don't have a fatal compiler error on the same line to avoid noise.
     const declaredVariables = new Set<string>([
-        'this', 'props', 'Math', 'JSON', 'console', 'window', 'document', 
-        'onMount', 'onUnmounted', 'onUpdated', 'onCleanup'
+        'this', 'props', 'Math', 'JSON', 'console', 'window', 'document', 'history', 'location',
+        'onMount', 'onUnmounted', 'onUpdated', 'onCleanup', 'signal', 'computed', 'effect',
+        'true', 'false', 'null', 'undefined', 'NaN', 'Infinity',
+        'parseInt', 'parseFloat', 'encodeURIComponent', 'decodeURIComponent',
+        'Object', 'Array', 'String', 'Number', 'Boolean', 'Promise', 'Map', 'Set',
+        'typeof', 'instanceof', 'in', 'of', 'new', 'delete', 'void', 'await', 'async'
     ]);
-    
-    // Extract standard declarations
-    const declarationRegex = /\b(?:var|let|const|function)\s+([a-zA-Z0-9_$]+)/g;
-    let declMatch;
-    while ((declMatch = declarationRegex.exec(text)) !== null) {
-        if (declMatch[1]) declaredVariables.add(declMatch[1]);
-    }
 
-    // Extract destructuring variables (e.g., var { x, y } = useDraggable())
-    const destructureRegex = /(?:var|let|const)\s*\{\s*([^}]+)\s*\}\s*=/g;
-    let destMatch;
-    while ((destMatch = destructureRegex.exec(text)) !== null) {
-        if (destMatch[1]) {
-            destMatch[1].split(',').forEach(v => {
-                const name = v.split(':')[0].trim(); // Handle { source: alias }
-                if (name) declaredVariables.add(name);
-            });
-        }
-    }
+    const scriptVars = getScriptDeclarations(text);
+    scriptVars.forEach(v => declaredVariables.add(v));
 
     // SCAN TEMPLATES
     const templateRegex = /(?:var|this\.|let|const)?\s*template\s*[:=]\s*`([\s\S]*?)`/g;
@@ -856,10 +1055,10 @@ async function validateTextDocument(textDocument: TextDocument): Promise<void> {
  * Isolated Expression Tokenizer: Identifies used variables and throws diagnostics if undeclared.
  */
 function analyzeExpression(
-    expression: string, 
-    baseOffset: number, 
-    declaredVariables: Set<string>, 
-    document: TextDocument, 
+    expression: string,
+    baseOffset: number,
+    declaredVariables: Set<string>,
+    document: TextDocument,
     diagnostics: Diagnostic[]
 ) {
     const wordsRegex = /\b[a-zA-Z_$][a-zA-Z0-9_$]*\b/g;

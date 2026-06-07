@@ -12,16 +12,18 @@ async function getDirectorySize(dirPath: string): Promise<number> {
 
     const files = await fs.promises.readdir(dirPath, { withFileTypes: true });
 
-    for (const file of files) {
+    const sizes = await Promise.all(files.map(async (file) => {
         const fullPath = path.join(dirPath, file.name);
         if (file.isDirectory()) {
-            totalSize += await getDirectorySize(fullPath);
+            return getDirectorySize(fullPath);
         } else if (file.isFile()) {
             const stats = await fs.promises.stat(fullPath);
-            totalSize += stats.size;
+            return stats.size;
         }
-    }
-    return totalSize;
+        return 0;
+    }));
+
+    return sizes.reduce((acc, size) => acc + size, 0);
 }
 
 /**

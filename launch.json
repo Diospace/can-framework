@@ -10,9 +10,9 @@
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/ide-extension/out/**/*.js"
             ],
-            "preLaunchTask": "npm: build"
+            "preLaunchTask": "npm: vscode:build-extension"
         },
         {
             "name": "Attach to Server",
@@ -20,7 +20,7 @@
             "request": "attach",
             "port": 6009,
             "restart": true,
-            "outFiles": ["${workspaceFolder}/out/**/*.js"]
+            "outFiles": ["${workspaceFolder}/ide-extension/out/**/*.js"]
         }
     ]
 }

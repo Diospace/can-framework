@@ -58,8 +58,8 @@ component About {
                     <div class="lib-card" style="display: {{activeTab.value == 'drag' ? 'block' : 'none'}}">
                         <h4>Draggable Interaction</h4>
                         <div class="demo-area" style="height: 150px; position: relative; overflow: hidden;">
-                            <div c-ref="dragRef" class="drag-item" style="transform: translate({{x}}px, {{y}}px); cursor: {{isDragging ? 'grabbing' : 'grab'}};">
-                                {{ isDragging ? '✊' : '✋' }}
+                            <div c-ref="dragRef" class="drag-item" style="transform: translate({{x.value}}px, {{y.value}}px); cursor: {{isDragging.value ? 'grabbing' : 'grab'}};">
+                                {{ isDragging.value ? '✊' : '✋' }}
                             </div>
                         </div>
                     </div>

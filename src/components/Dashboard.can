@@ -18,8 +18,9 @@ component Dashboard {
         <div class="dashboard-layout">
             <aside class="sidebar">
                 <div class="logo">CanFW</div>
-                
+                <p>Welcome to the Dashboard</p>
                 <nav>
+                 
                     <a class="nav-item active">Overview</a>
                     <a class="nav-item" onclick="() => this.navigate('/')">Home</a>
                     <a class="nav-item">Settings</a>

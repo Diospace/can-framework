@@ -12,6 +12,7 @@ component SystemMonitor {
 
     var template = `
         <div>
+        
             <h3>System Monitor</h3>
             <p>FPS: {{fps}}</p>
             

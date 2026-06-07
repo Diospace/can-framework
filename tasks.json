@@ -9,6 +9,15 @@
                 "isDefault": true
             },
             "problemMatcher": "$tsc"
+        },
+        {
+            "type": "npm",
+            "script": "vscode:build-extension",
+            "group": "build",
+            "problemMatcher": {
+                "base": "$tsc"
+            },
+            "label": "npm: vscode:build-extension"
         }
     ]
 }

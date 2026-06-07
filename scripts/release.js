@@ -31,7 +31,7 @@ async function release() {
             process.exit(1);
         }
 
-        
+
         // 0. Safety Check: Ensure we are on the main branch
         const branch = execSync('git rev-parse --abbrev-ref HEAD').toString().trim();
         if (branch !== 'main' && !isForce) {
@@ -51,9 +51,9 @@ async function release() {
 
         // 2. Run the unified build process (Handles compile:all and CDN assets internally)
         console.log('--- Step 1: Generating distribution build (non-minified)...');
-        execSync('npm run build -- --clear', { 
-            stdio: 'inherit', 
-            env: { ...process.env, NODE_ENV: 'development' } 
+        execSync('npm run build -- --clear', {
+            stdio: 'inherit',
+            env: { ...process.env, NODE_ENV: 'development' }
         });
 
         // 2. Run tests (Step numbering shifted)
@@ -71,10 +71,10 @@ async function release() {
 
         // 5. Sync Git Tag
         const tagName = `v${pkg.version}`;
-        
+
         console.log(`--- Syncing Git tag ${tagName}...`);
         const tagExists = execSync(`git tag -l ${tagName}`).toString().trim();
-        
+
         if (tagExists) {
             console.log(`\x1b[33mWarning: Tag ${tagName} already exists. Skipping tag creation.\x1b[0m`);
         } else {
@@ -82,17 +82,17 @@ async function release() {
             console.log(`--- Tag ${tagName} created.`);
         }
 
-         // 6. Push changes to trigger GitHub Actions
+        // 6. Push changes to trigger GitHub Actions
         console.log('--- Pushing to GitHub...');
         execSync(`git push origin main`, { stdio: 'inherit' });
         execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
 
-    
+
 
         console.log('\x1b[32m%s\x1b[0m', '>>> Framework successfully published to NPM!');
         // console.log('\x1b[32m%s\x1b[0m', `>>> Version ${tagName} pushed successfully!`);
         // console.log('\x1b[36m%s\x1b[0m', 'GitHub Actions will now handle the NPM publish with provenance.');
- 
+
     } catch (err) {
         console.error('\x1b[31m%s\x1b[0m', '>>> Release process encountered an error:');
         console.error(err.stderr ? err.stderr.toString() : err.message);

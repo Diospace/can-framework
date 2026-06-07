@@ -10,6 +10,11 @@ import {
 let client: LanguageClient | undefined;
 
 /**
+ * HTML Void elements that do not require a closing tag.
+ */
+const VOID_ELEMENTS = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
+
+/**
  * This method is called when the extension is activated.
  */
 export function activate(context: vscode.ExtensionContext) {
@@ -20,7 +25,11 @@ export function activate(context: vscode.ExtensionContext) {
 
     const serverOptions: ServerOptions = {
         run: { module: serverModule, transport: TransportKind.ipc },
-        debug: { module: serverModule, transport: TransportKind.ipc }
+        debug: { 
+            module: serverModule, 
+            transport: TransportKind.ipc,
+            options: { execArgv: ['--nolazy', '--inspect=6009'] }
+        }
     };
 
     const clientOptions: LanguageClientOptions = {
@@ -64,7 +73,7 @@ export function activate(context: vscode.ExtensionContext) {
     // --- 3. AUTO-CLOSE TAG LOGIC ---
     vscode.workspace.onDidChangeTextDocument(event => {
         const editor = vscode.window.activeTextEditor;
-        if (!editor || event.document.languageId !== 'can' || event.contentChanges.length !== 1) {
+        if (!editor || !client || event.document.languageId !== 'can' || event.contentChanges.length !== 1) {
             return;
         }
 
@@ -77,25 +86,28 @@ export function activate(context: vscode.ExtensionContext) {
         const position = change.range.start.translate(0, 1);
         const lineText = editor.document.lineAt(position.line).text;
         const textBefore = lineText.substring(0, position.character);
+        const textAfter = lineText.substring(position.character);
 
-        // Regex to find the opening tag name just before the cursor
+        // Regex to find the opening tag name just before the cursor, ensuring it's not a self-closing tag
         const tagMatch = textBefore.match(/<([a-zA-Z][a-zA-Z0-9-]*)(?:\s+[^>]*?)?>$/);
-        if (!tagMatch) {
+        if (!tagMatch || textBefore.endsWith('/>') || textAfter.trim().startsWith(`</${tagMatch[1]}>`)) {
             return;
         }
 
         const tagName = tagMatch[1];
-    const voidElements = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'];
 
         // Don't close void elements (e.g., <img >)
-        if (voidElements.includes(tagName.toLowerCase())) {
+        if (VOID_ELEMENTS.includes(tagName.toLowerCase())) {
             return;
         }
 
         // Ensure we are inside a template block
         const offset = editor.document.offsetAt(position);
-        const prefix = editor.document.getText().substring(0, offset);
-        if (!/template\s*=\s*`[^`]*$/.test(prefix)) {
+        // Scan only the last 5000 characters to prevent performance degradation on large files
+        const startScan = Math.max(0, offset - 5000);
+        const prefix = editor.document.getText(new vscode.Range(editor.document.positionAt(startScan), position));
+        
+        if (!/(?:var|let|const)?\s*template\s*[:=]\s*`[^`]*$/.test(prefix)) {
             return;
         }
 

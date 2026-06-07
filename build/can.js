@@ -1589,6 +1589,7 @@ var Engine = /*#__PURE__*/function () {
   return _createClass(Engine, [{
     key: "add",
     value: function add(anim) {
+      if (typeof requestAnimationFrame === 'undefined') return;
       this.animations.add(anim);
       if (!this.rafId) this.tick();
     }
@@ -1741,6 +1742,16 @@ function parseColor(color) {
       b = _hslToRgb2[2];
     return [r, g, b, a];
   }
+
+  // Fallback: Resolve via DOM for named colors and CSS variables
+  if (typeof document !== 'undefined') {
+    var temp = document.createElement('div');
+    temp.style.color = color;
+    document.body.appendChild(temp);
+    var resolved = getComputedStyle(temp).color;
+    document.body.removeChild(temp);
+    if (resolved !== color) return parseColor(resolved);
+  }
   return [0, 0, 0, 1]; // Default to black if parsing fails
 }
 function interpolateColor(from, to, t) {
@@ -1758,7 +1769,11 @@ function getUnit(val) {
   return split ? split[1] || '' : '';
 }
 function getCSSValue(el, prop) {
-  var uppercasePropName = prop.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  // Guard for SSR or non-browser environments
+  if (typeof getComputedStyle === 'undefined') return '0';
+
+  // Convert camelCase to kebab-case
+  var uppercasePropName = prop.startsWith('--') ? prop : prop.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
   return getComputedStyle(el).getPropertyValue(uppercasePropName) || '0';
 }
 function getRelativeValue(to, from) {
@@ -6072,7 +6087,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Export version or other metadata if needed
-var VERSION = '1.1.2';
+var VERSION = '1.1.3';
 })();
 
 /******/ 	return __webpack_exports__;

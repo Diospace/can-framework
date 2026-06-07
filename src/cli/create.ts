@@ -33,7 +33,7 @@ export function create(projectName: string, templatesDir: string, frameworkVersi
         if (fs.existsSync(packageJsonPath)) {
             const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
             pkg.name = projectName;
-            
+
             const isLocalDev = process.env.CAN_LOCAL_DEV === 'true';
             const frameworkRoot = path.resolve(templatesDir, '../..');
 
@@ -68,9 +68,9 @@ export function create(projectName: string, templatesDir: string, frameworkVersi
         // 3. Optional: Automatically run npm install
         console.log('\x1b[36m%s\x1b[0m', '>>> Installing dependencies...');
         try {
-            execSync('npm install', { 
-                cwd: root, 
-                stdio: 'inherit' 
+            execSync('npm install', {
+                cwd: root,
+                stdio: 'inherit'
             });
             console.log('\n\x1b[32mProject created and dependencies installed successfully!\x1b[0m');
             console.log(`\nTo start developing:\n  cd ${projectName}\n  npm run dev`);

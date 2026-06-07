@@ -55,12 +55,12 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
 
         fs.readFile(filePath, (error, content) => {
             if (error) {
-                if(error.code == 'ENOENT') {
+                if (error.code == 'ENOENT') {
                     res.writeHead(404);
                     res.end('File not found');
                 } else {
                     res.writeHead(500);
-                    res.end('Server Error: '+error.code);
+                    res.end('Server Error: ' + error.code);
                 }
             } else {
                 // Inject Dev/HMR scripts into HTML (Only if NOT production)
@@ -108,8 +108,8 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
                     </script>`;
 
                     // Automatically inject the entry point script if not present
-                    const entryScript = content.toString().includes('main.mjs') 
-                        ? '' 
+                    const entryScript = content.toString().includes('main.mjs')
+                        ? ''
                         : '<script type="module" src="/main.mjs"></script>';
 
                     const html = content.toString().replace('</body>', entryScript + mockScript + hmrScript + '</body>');
@@ -148,14 +148,14 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
                         console.log(`\n[Watch] Change: ${relativePath}`);
                         try {
                             await build([relativePath]);
-                            
+
                             // Map source path to served URL
                             let url = '/' + path.relative(cwd, fullPath).replace(/\\/g, '/');
                             // Adjust for src flattening in dist
                             if (url.startsWith('/src/')) url = url.replace('/src/', '/');
                             if (url.endsWith('.can')) url = url.replace('.can', '.mjs');
                             if (url.endsWith('.ts')) url = url.replace('.ts', '.mjs');
-                            
+
                             // Check if the change is in a .can file (which contains styles)
                             const isStyleCandidate = filename?.endsWith('.can');
                             const payload = {

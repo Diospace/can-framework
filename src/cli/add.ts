@@ -82,7 +82,7 @@ function addComponent(name: string, cwd: string) {
     const appFile = path.join(cwd, 'src', 'App.can');
     if (fs.existsSync(appFile)) {
         let appContent = fs.readFileSync(appFile, 'utf-8');
-        
+
         // 1. Inject Import Statement
         const importStmt = `import { ${componentName} } from './components/${componentName}.can';`;
         if (!appContent.includes(importStmt)) {
@@ -101,9 +101,9 @@ function addComponent(name: string, cwd: string) {
                 const templateBody = match[1];
                 const lastDivIndex = templateBody.lastIndexOf('</div>');
                 if (lastDivIndex !== -1) {
-                    const updatedBody = templateBody.slice(0, lastDivIndex).trimEnd() + 
-                                       `\n            ${componentTag}\n        ` + 
-                                       templateBody.slice(lastDivIndex);
+                    const updatedBody = templateBody.slice(0, lastDivIndex).trimEnd() +
+                        `\n            ${componentTag}\n        ` +
+                        templateBody.slice(lastDivIndex);
                     appContent = appContent.replace(templateBody, updatedBody);
                     fs.writeFileSync(appFile, appContent);
                     console.log(`\x1b[32mSuccessfully registered component in:\x1b[0m src/App.can`);
@@ -148,7 +148,7 @@ export default async function handler(req: any, res: any) {
     const indexFile = path.join(cwd, 'api', 'index.ts');
     if (fs.existsSync(indexFile)) {
         let indexContent = fs.readFileSync(indexFile, 'utf-8');
-        
+
         // Generate a valid camelCase name for the handler variable
         const handlerName = routeName.replace(/-([a-z])/g, (g) => g[1].toUpperCase()) + 'Handler';
 
