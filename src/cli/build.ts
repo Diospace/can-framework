@@ -13,27 +13,72 @@ import { cModelPlugin } from '../compiler/directives/c-model';
 import { cShowPlugin } from '../compiler/directives/c-show';
 
 /**
+ * Default plugins used by the framework transpiler
+ */
+export const defaultPlugins = [
+    cMountPlugin,
+    onUpdatePlugin,
+    cIfPlugin,
+    cForPlugin,
+    cBindPlugin,
+    cModelPlugin,
+    cShowPlugin
+];
+
+/**
+ * Helper to calculate output path consistently
+ */
+export function getOutputPath(sourcePath: string, inputRoot: string, outputRoot: string, newExt: string): string {
+    const relativePath = path.relative(inputRoot, sourcePath);
+    const outRelativePath = relativePath.replace(new RegExp(`${path.extname(sourcePath)}$`), newExt);
+    return path.join(outputRoot, outRelativePath);
+}
+
+/**
+ * Internal helper to find where a file will be placed in dist to calculate relative imports
+ */
+function getCalculatedOutputPath(fullPath: string): string {
+    const cwd = process.cwd();
+    const distDir = path.join(cwd, 'dist');
+
+    if (fullPath.startsWith(path.join(cwd, 'src'))) {
+        return getOutputPath(fullPath, path.join(cwd, 'src'), distDir, '.mjs');
+    } else if (fullPath.startsWith(path.join(cwd, 'examples'))) {
+        return getOutputPath(fullPath, path.join(cwd, 'examples'), path.join(distDir, 'examples'), '.mjs');
+    } else if (fullPath.startsWith(path.join(cwd, 'api'))) {
+        return getOutputPath(fullPath, path.join(cwd, 'api'), path.join(distDir, 'api'), '.mjs');
+    } else if (fullPath.startsWith(path.join(cwd, 'build'))) {
+        return getOutputPath(fullPath, path.join(cwd, 'build'), path.join(distDir, 'build'), '.mjs');
+    }
+    return getOutputPath(fullPath, path.dirname(fullPath), distDir, '.mjs');
+}
+
+/**
  * Helper to fix import paths: ensure relative imports use .mjs extensions
  * and handle example-specific path adjustments.
  */
-export function fixImports(code: string, fullPath: string): string {
+export function fixImports(code: string, fullPath: string, providedFrameworkImport?: string): string {
     // Strip shebangs WITHOUT removing the newline. This keeps line numbers aligned.
     let fixed = code.replace(/^#!.*/, '');
 
-    // Calculate relative path to the root of the project (dist folder)
-    const cwd = process.cwd();
-    const srcDir = path.join(cwd, 'src');
-    const relativeToSrc = path.relative(path.dirname(fullPath), srcDir);
-
-    // If we are in src or a subfolder of src, we need to point to the root can-framework.mjs
-    // If relativeToSrc is empty, it's '.', if it's 'components', it's '..'
-    let runtimePath = relativeToSrc === '' ? '.' : relativeToSrc.replace(/\\/g, '/');
-    if (!runtimePath.startsWith('.')) runtimePath = './' + runtimePath;
-    const frameworkImport = `${runtimePath}/can-framework.mjs`;
+    // Calculate framework import path if not provided, otherwise use the provided one.
+    const frameworkImportToUse = providedFrameworkImport || (() => {
+        const cwd = process.cwd();
+        const distDir = path.join(cwd, 'dist');
+        const currentFileOutputPath = getCalculatedOutputPath(fullPath);
+        const frameworkDistPath = path.join(distDir, 'can-framework.mjs');
+        const rel = path.relative(path.dirname(currentFileOutputPath), frameworkDistPath).replace(/\\/g, '/');
+        return rel.startsWith('.') ? rel : './' + rel;
+    })();
 
     // 0. Handle bare framework imports: convert @decaspace/can-framework to relative runtime path
     fixed = fixed.replace(/(from|import|export)\s+(['"])@decaspace\/can-framework\2/g, (match, p1, p2) => {
-        return `${p1} ${p2}${frameworkImport}${p2}`;
+        return `${p1} ${p2}${frameworkImportToUse}${p2}`;
+    });
+
+    // 0.1 Handle framework import placeholder from codegen.ts
+    fixed = fixed.replace(/from\s+(['"])__CAN_FRAMEWORK_IMPORT__\1/g, (match, p1) => {
+        return `from ${p1}${frameworkImportToUse}${p1}`;
     });
 
     // 1. Handle standard imports/exports: import {x} from './y' or export {x} from './y'
@@ -60,16 +105,14 @@ export function fixImports(code: string, fullPath: string): string {
  */
 function getTsTransformers(fullPath: string): ts.CustomTransformers {
     const isExample = fullPath.includes(path.sep + 'examples' + path.sep);
-
-    // Calculate path depth for framework import
     const cwd = process.cwd();
-    const srcDir = path.join(cwd, 'src');
-    const relativeToSrc = path.relative(path.dirname(fullPath), srcDir);
-    let runtimePath = relativeToSrc === '' ? '.' : relativeToSrc.replace(/\\/g, '/');
-    if (!runtimePath.startsWith('.')) runtimePath = './' + runtimePath;
-    const frameworkImport = `${runtimePath}/can-framework.mjs`;
+    const distDir = path.join(cwd, 'dist');
+    const currentFileOutputPath = getCalculatedOutputPath(fullPath);
+    const frameworkDistPath = path.join(distDir, 'can-framework.mjs');
+    const frameworkImportResolved = path.relative(path.dirname(currentFileOutputPath), frameworkDistPath).replace(/\\/g, '/');
+    const finalFrameworkImport = frameworkImportResolved.startsWith('.') ? frameworkImportResolved : './' + frameworkImportResolved;
 
-    const transformer = (context: ts.TransformationContext) => {
+    const transformerFactory: ts.TransformerFactory<ts.SourceFile> = (context: ts.TransformationContext) => {
         return (sourceFile: ts.SourceFile) => {
             function visitor(node: ts.Node): ts.Node {
                 // Handle Import/Export declarations
@@ -78,7 +121,7 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
                         let specifier = node.moduleSpecifier.text;
                         // Handle bare framework import
                         if (specifier === '@decaspace/can-framework') {
-                            specifier = frameworkImport;
+                            specifier = finalFrameworkImport; // Corrected variable name
                         }
                         if (specifier.startsWith('.')) {
                             // Apply example path fix
@@ -106,23 +149,9 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
     };
 
     return {
-        before: [transformer]
+        before: [transformerFactory]
     };
 }
-
-
-/**
- * Default plugins used by the framework transpiler
- */
-export const defaultPlugins = [
-    cMountPlugin,
-    onUpdatePlugin,
-    cIfPlugin,
-    cForPlugin,
-    cBindPlugin,
-    cModelPlugin,
-    cShowPlugin
-];
 
 /**
  * Determines the output path and ensures the directory exists
@@ -136,15 +165,6 @@ function saveFile(content: string, sourcePath: string, inputRoot: string, output
     }
 
     fs.writeFileSync(outPath, content);
-}
-
-/**
- * Helper to calculate output path consistently
- */
-function getOutputPath(sourcePath: string, inputRoot: string, outputRoot: string, newExt: string): string {
-    const relativePath = path.relative(inputRoot, sourcePath);
-    const outRelativePath = relativePath.replace(new RegExp(`${path.extname(sourcePath)}$`), newExt);
-    return path.join(outputRoot, outRelativePath);
 }
 
 interface BuildContext {
@@ -208,8 +228,16 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
 
     if (ext === '.can') {
         const content = fs.readFileSync(fullPath, 'utf-8');
-        const { code } = await transpile(content, defaultPlugins, fullPath);
-        let processedCode = fixImports(code, fullPath);
+
+        // Calculate finalFrameworkImport locally for .can files as it's not in this scope
+        const cwd = process.cwd();
+        const distDir = path.join(cwd, 'dist');
+        const currentFileOutputPath = getCalculatedOutputPath(fullPath);
+        const frameworkDistPath = path.join(distDir, 'can-framework.mjs');
+        const localFinalFrameworkImport = path.relative(path.dirname(currentFileOutputPath), frameworkDistPath).replace(/\\/g, '/');
+        const finalFrameworkImportForCan = localFinalFrameworkImport.startsWith('.') ? localFinalFrameworkImport : './' + localFinalFrameworkImport;
+        const { code } = await transpile(content, defaultPlugins, fullPath, finalFrameworkImportForCan); // Pass localFinalFrameworkImport
+        let processedCode = fixImports(code, fullPath, finalFrameworkImportForCan); // Pass localFinalFrameworkImport
 
 
 
@@ -379,8 +407,10 @@ export async function build(targets?: string[], minify: boolean = false) {
     console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} files updated, ${context.skipped} skipped.`);
 
     // Copy framework runtime to project dist
-    const frameworkDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const frameworkDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../dist'); // Correct path to framework's dist
     const runtimeFiles = ['index.mjs', 'runtime-helpers.mjs', 'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'];
+    // Determine the framework's root directory
+    const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
     runtimeFiles.forEach(file => {
         const src = path.join(frameworkDist, file);
@@ -390,8 +420,25 @@ export async function build(targets?: string[], minify: boolean = false) {
             else fs.copyFileSync(src, dest);
         }
     });
+    // Only copy framework runtime to project dist if we are NOT building the framework itself.
+    // This prevents copying 'dist/reactivity' to 'dist/reactivity' when building the framework.
+    if (cwd !== frameworkRoot) {
+        const frameworkDist = path.resolve(frameworkRoot, 'dist'); // Path to the framework's own compiled output
+        const runtimeFiles = ['index.mjs', 'runtime-helpers.mjs', 'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'];
 
-    // Handle public/index.html injection for production
+        // Handle public/index.html injection for production
+        runtimeFiles.forEach(file => {
+            const src = path.join(frameworkDist, file);
+            const dest = path.join(distDir, file === 'index.mjs' ? 'can-framework.mjs' : file);
+            if (fs.existsSync(src)) {
+                if (fs.statSync(src).isDirectory()) fs.cpSync(src, dest, { recursive: true });
+                else fs.copyFileSync(src, dest);
+            }
+        });
+    }
+
+    // Handle public/index.html injection for the current project (framework or user app).
+    // This part should always run for the current project's dist.
     const publicDir = path.join(cwd, 'public');
     const indexHtml = path.join(publicDir, 'index.html');
     if (fs.existsSync(indexHtml)) {

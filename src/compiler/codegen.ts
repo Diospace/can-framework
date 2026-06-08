@@ -21,9 +21,9 @@ import { buttonClassPlugin } from './directives/button-class-plugin';
 import * as ts from 'typescript';
 
 /**
- * Simple transpiler to convert .can syntax to JavaScript
+ * Simple transpiler to convert .can syntax to JavaScript.
  */
-export async function transpile(content: string, plugins: CompilerPlugin[] = [], filename: string = 'anonymous.can'): Promise<{ code: string; map?: string }> {
+export async function transpile(content: string, plugins: CompilerPlugin[] = [], filename: string = 'anonymous.can', frameworkImportPath: string = '__CAN_FRAMEWORK_IMPORT__'): Promise<{ code: string; map?: string }> {
     // Define base mandatory plugins
     const basePlugins = [
         cOncePlugin,
@@ -183,7 +183,7 @@ _style.textContent = \`${css.replace(/`/g, '\\`')}\`;`;
   Component, effect, useTransition, createComponent, t, cHtml, 
   getDirective, cOn, cRef, defineCustomElement, nativeElementMap, 
   cModel, cValidate, cPortal 
-} from '@decaspace/can-framework';
+} from '${frameworkImportPath}'; // Placeholder for build.ts to replace
 ${imports}
 
 ${cssInjectionCode}
