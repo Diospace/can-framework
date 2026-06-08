@@ -406,27 +406,15 @@ export async function build(targets?: string[], minify: boolean = false) {
     process.stdout.write('\n');
     console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} files updated, ${context.skipped} skipped.`);
 
-    // Copy framework runtime to project dist
-    const frameworkDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../dist'); // Correct path to framework's dist
-    const runtimeFiles = ['index.mjs', 'runtime-helpers.mjs', 'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'];
     // Determine the framework's root directory
     const frameworkRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
-    runtimeFiles.forEach(file => {
-        const src = path.join(frameworkDist, file);
-        const dest = path.join(distDir, file === 'index.mjs' ? 'can-framework.mjs' : file);
-        if (fs.existsSync(src)) {
-            if (fs.statSync(src).isDirectory()) fs.cpSync(src, dest, { recursive: true });
-            else fs.copyFileSync(src, dest);
-        }
-    });
     // Only copy framework runtime to project dist if we are NOT building the framework itself.
     // This prevents copying 'dist/reactivity' to 'dist/reactivity' when building the framework.
     if (cwd !== frameworkRoot) {
         const frameworkDist = path.resolve(frameworkRoot, 'dist'); // Path to the framework's own compiled output
         const runtimeFiles = ['index.mjs', 'runtime-helpers.mjs', 'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'];
 
-        // Handle public/index.html injection for production
         runtimeFiles.forEach(file => {
             const src = path.join(frameworkDist, file);
             const dest = path.join(distDir, file === 'index.mjs' ? 'can-framework.mjs' : file);

@@ -7,8 +7,6 @@ export default function canPlugin() {
     name: 'vite-plugin-can',
     async transform(code: string, id: string) {
       if (id.endsWith('.can')) {
-        const { code: transpiledCode, map } = await transpile(code, [], id, frameworkImport);
-
         // Calculate frameworkImport for Vite's context
         const cwd = process.cwd();
         const distDir = path.join(cwd, 'dist'); // Assuming Vite builds to 'dist'
@@ -31,6 +29,8 @@ export default function canPlugin() {
         if (!frameworkImport.startsWith('.')) {
           frameworkImport = './' + frameworkImport;
         }
+
+        const { code: transpiledCode, map } = await transpile(code, [], id, frameworkImport);
 
         // Apply fixImports to replace the placeholder and handle other relative imports
         const finalCode = fixImports(transpiledCode, id, frameworkImport);
