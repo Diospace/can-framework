@@ -75,6 +75,7 @@ var CanDevTools = /*#__PURE__*/function (_EventEmitter) {
     _defineProperty(_this, "_history", []);
     _defineProperty(_this, "_signals", new Map());
     _defineProperty(_this, "_components", new Set());
+    _defineProperty(_this, "_initBuffer", []);
     return _this;
   }
   _inherits(CanDevTools, _EventEmitter);
@@ -92,6 +93,16 @@ var CanDevTools = /*#__PURE__*/function (_EventEmitter) {
         this.on(DevToolsEvents.SIGNAL_INIT, function (data) {
           if (data.internal) return; // Filter out internal framework signals
           _this2._signals.set(data.id, data.signal);
+
+          // Buffer initialization to prevent flooding postMessage
+          _this2._initBuffer.push({
+            id: data.id,
+            name: data.name
+          });
+          if (_this2._initBuffer.length > 50) {
+            _this2.emit('signal:batch-init', _this2._initBuffer);
+            _this2._initBuffer = [];
+          }
         });
         this.on(DevToolsEvents.SIGNAL_UPDATE, function (data) {
           if (!_this2._signals.has(data.id)) return; // Only record history for tracked signals
@@ -3851,6 +3862,27 @@ function useSound(src) {
 
 /***/ },
 
+/***/ "./src/runtime-core/directives/Cref.ts"
+/*!*********************************************!*\
+  !*** ./src/runtime-core/directives/Cref.ts ***!
+  \*********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   cRef: () => (/* binding */ cRef)
+/* harmony export */ });
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+function cRef(el, ref) {
+  if (typeof ref === 'function') {
+    ref(el);
+  } else if (ref && _typeof(ref) === 'object' && 'value' in ref) {
+    ref.value = el;
+  }
+}
+
+/***/ },
+
 /***/ "./src/runtime-core/directives/cModelRuntime.ts"
 /*!******************************************************!*\
   !*** ./src/runtime-core/directives/cModelRuntime.ts ***!
@@ -3961,6 +3993,68 @@ var cModelDirective = {
 
 /***/ },
 
+/***/ "./src/runtime-core/directives/cPortalRuntime.ts"
+/*!*******************************************************!*\
+  !*** ./src/runtime-core/directives/cPortalRuntime.ts ***!
+  \*******************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   cPortal: () => (/* binding */ cPortal)
+/* harmony export */ });
+/* harmony import */ var _apiLifecycle__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../apiLifecycle */ "./src/runtime-core/apiLifecycle.ts");
+/* harmony import */ var _reactivity_ref__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../reactivity/ref */ "./src/reactivity/ref.ts");
+/* harmony import */ var _animation__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ../animation */ "./src/runtime-core/animation.ts");
+function _regenerator() { /*! regenerator-runtime -- Copyright (c) 2014-present, Facebook, Inc. -- license (MIT): https://github.com/babel/babel/blob/main/packages/babel-helpers/LICENSE */ var e, t, r = "function" == typeof Symbol ? Symbol : {}, n = r.iterator || "@@iterator", o = r.toStringTag || "@@toStringTag"; function i(r, n, o, i) { var c = n && n.prototype instanceof Generator ? n : Generator, u = Object.create(c.prototype); return _regeneratorDefine2(u, "_invoke", function (r, n, o) { var i, c, u, f = 0, p = o || [], y = !1, G = { p: 0, n: 0, v: e, a: d, f: d.bind(e, 4), d: function d(t, r) { return i = t, c = 0, u = e, G.n = r, a; } }; function d(r, n) { for (c = r, u = n, t = 0; !y && f && !o && t < p.length; t++) { var o, i = p[t], d = G.p, l = i[2]; r > 3 ? (o = l === n) && (u = i[(c = i[4]) ? 5 : (c = 3, 3)], i[4] = i[5] = e) : i[0] <= d && ((o = r < 2 && d < i[1]) ? (c = 0, G.v = n, G.n = i[1]) : d < l && (o = r < 3 || i[0] > n || n > l) && (i[4] = r, i[5] = n, G.n = l, c = 0)); } if (o || r > 1) return a; throw y = !0, n; } return function (o, p, l) { if (f > 1) throw TypeError("Generator is already running"); for (y && 1 === p && d(p, l), c = p, u = l; (t = c < 2 ? e : u) || !y;) { i || (c ? c < 3 ? (c > 1 && (G.n = -1), d(c, u)) : G.n = u : G.v = u); try { if (f = 2, i) { if (c || (o = "next"), t = i[o]) { if (!(t = t.call(i, u))) throw TypeError("iterator result is not an object"); if (!t.done) return t; u = t.value, c < 2 && (c = 0); } else 1 === c && (t = i["return"]) && t.call(i), c < 2 && (u = TypeError("The iterator does not provide a '" + o + "' method"), c = 1); i = e; } else if ((t = (y = G.n < 0) ? u : r.call(n, G)) !== a) break; } catch (t) { i = e, c = 1, u = t; } finally { f = 1; } } return { value: t, done: y }; }; }(r, o, i), !0), u; } var a = {}; function Generator() {} function GeneratorFunction() {} function GeneratorFunctionPrototype() {} t = Object.getPrototypeOf; var c = [][n] ? t(t([][n]())) : (_regeneratorDefine2(t = {}, n, function () { return this; }), t), u = GeneratorFunctionPrototype.prototype = Generator.prototype = Object.create(c); function f(e) { return Object.setPrototypeOf ? Object.setPrototypeOf(e, GeneratorFunctionPrototype) : (e.__proto__ = GeneratorFunctionPrototype, _regeneratorDefine2(e, o, "GeneratorFunction")), e.prototype = Object.create(u), e; } return GeneratorFunction.prototype = GeneratorFunctionPrototype, _regeneratorDefine2(u, "constructor", GeneratorFunctionPrototype), _regeneratorDefine2(GeneratorFunctionPrototype, "constructor", GeneratorFunction), GeneratorFunction.displayName = "GeneratorFunction", _regeneratorDefine2(GeneratorFunctionPrototype, o, "GeneratorFunction"), _regeneratorDefine2(u), _regeneratorDefine2(u, o, "Generator"), _regeneratorDefine2(u, n, function () { return this; }), _regeneratorDefine2(u, "toString", function () { return "[object Generator]"; }), (_regenerator = function _regenerator() { return { w: i, m: f }; })(); }
+function _regeneratorDefine2(e, r, n, t) { var i = Object.defineProperty; try { i({}, "", {}); } catch (e) { i = 0; } _regeneratorDefine2 = function _regeneratorDefine(e, r, n, t) { function o(r, n) { _regeneratorDefine2(e, r, function (e) { return this._invoke(r, n, e); }); } r ? i ? i(e, r, { value: n, enumerable: !t, configurable: !t, writable: !t }) : e[r] = n : (o("next", 0), o("throw", 1), o("return", 2)); }, _regeneratorDefine2(e, r, n, t); }
+function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.value; } catch (n) { return void e(n); } i.done ? t(u) : Promise.resolve(u).then(r, o); }
+function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
+
+
+
+
+/**
+ * Runtime helper for c-portal.
+ * Moves the element to the target and handles cleanup on unmount.
+ */
+function cPortal(el, targetGetter, transitionName) {
+  // Resolve the target (supports strings or raw elements)
+  var target = (0,_reactivity_ref__WEBPACK_IMPORTED_MODULE_1__.unref)(targetGetter());
+  var mountTarget = (typeof target === 'string' ? document.querySelector(target) : target) || document.body;
+
+  // Append the element to the portal target
+  if (mountTarget) {
+    mountTarget.appendChild(el);
+    if (transitionName) {
+      (0,_animation__WEBPACK_IMPORTED_MODULE_2__.enter)(el, transitionName);
+    }
+  }
+
+  // Cleanup: Remove from portal target when the component scope is destroyed
+  (0,_apiLifecycle__WEBPACK_IMPORTED_MODULE_0__.onUnmounted)(/*#__PURE__*/_asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee() {
+    return _regenerator().w(function (_context) {
+      while (1) switch (_context.n) {
+        case 0:
+          if (!transitionName) {
+            _context.n = 1;
+            break;
+          }
+          _context.n = 1;
+          return (0,_animation__WEBPACK_IMPORTED_MODULE_2__.leave)(el, transitionName);
+        case 1:
+          if (el.parentNode) {
+            el.parentNode.removeChild(el);
+          }
+        case 2:
+          return _context.a(2);
+      }
+    }, _callee);
+  })));
+}
+
+/***/ },
+
 /***/ "./src/runtime-core/directives/cShowRuntime.ts"
 /*!*****************************************************!*\
   !*** ./src/runtime-core/directives/cShowRuntime.ts ***!
@@ -3995,6 +4089,65 @@ var cShowDirective = {
 
 /***/ },
 
+/***/ "./src/runtime-core/directives/cValidateRuntime.ts"
+/*!*********************************************************!*\
+  !*** ./src/runtime-core/directives/cValidateRuntime.ts ***!
+  \*********************************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   cValidate: () => (/* binding */ cValidate)
+/* harmony export */ });
+/* harmony import */ var _reactivity_index__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../reactivity/index */ "./src/reactivity/index.ts");
+/* harmony import */ var _reactivity_ref__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../../reactivity/ref */ "./src/reactivity/ref.ts");
+
+
+/**
+ * Runtime helper for c-validate.
+ * Creates an error message element and tracks validation state.
+ */
+function cValidate(el, getter) {
+  // 1. Create the error display element
+  var errorEl = document.createElement('span');
+  errorEl.className = 'can-error-msg';
+  errorEl.style.color = '#d93025';
+  errorEl.style.fontSize = '0.8rem';
+  errorEl.style.marginTop = '4px';
+  errorEl.style.display = 'none';
+
+  // Insert after the input
+  el.after(errorEl);
+  (0,_reactivity_index__WEBPACK_IMPORTED_MODULE_0__.effect)(function () {
+    var rules = getter();
+    var val = (0,_reactivity_ref__WEBPACK_IMPORTED_MODULE_1__.unref)(rules.value);
+    var error = runValidation(val, rules);
+    if (error) {
+      errorEl.textContent = error;
+      errorEl.style.display = 'block';
+      el.style.borderColor = '#d93025';
+    } else {
+      errorEl.style.display = 'none';
+      el.style.borderColor = '';
+    }
+  });
+}
+function runValidation(val, rules) {
+  if (rules.required && !val) {
+    return typeof rules.required === 'string' ? rules.required : 'This field is required';
+  }
+  if (rules.min && String(val).length < rules.min) {
+    return "Minimum length is ".concat(rules.min, " characters");
+  }
+  if (rules.email && val && !/^\S+@\S+\.\S+$/.test(String(val))) {
+    return 'Please enter a valid email address';
+  }
+  if (rules.custom) return rules.custom(val);
+  return null;
+}
+
+/***/ },
+
 /***/ "./src/runtime-core/directives/directiveRegistry.ts"
 /*!**********************************************************!*\
   !*** ./src/runtime-core/directives/directiveRegistry.ts ***!
@@ -4012,6 +4165,103 @@ function registerDirective(name, directive) {
 }
 function getDirective(name) {
   return globalDirectives.get(name);
+}
+
+/***/ },
+
+/***/ "./src/runtime-core/directives/html.ts"
+/*!*********************************************!*\
+  !*** ./src/runtime-core/directives/html.ts ***!
+  \*********************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   cHtml: () => (/* binding */ cHtml)
+/* harmony export */ });
+/* harmony import */ var _reactivity_effect__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../../reactivity/effect */ "./src/reactivity/effect.ts");
+function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
+// import { cHtml } from '../runtime-core/html';
+// import { signal } from '../reactivity/signal';
+
+// const content = signal('<strong>Hello</strong> <script>alert("XSS")</script>');
+// const div = document.createElement('div');
+
+// // Renders: <strong>Hello</strong>
+// // The script tag is removed by the sanitizer
+// cHtml(div, content);
+
+
+function cHtml(el, value) {
+  (0,_reactivity_effect__WEBPACK_IMPORTED_MODULE_0__.effect)(function () {
+    var val = unwrap(value);
+    var html = val == null ? '' : String(val);
+    el.innerHTML = sanitize(html);
+  });
+}
+function unwrap(val) {
+  if (typeof val === 'function') return val();
+  if (val && _typeof(val) === 'object' && 'value' in val) return val.value;
+  return val;
+}
+function sanitize(html) {
+  // Basic sanitization to prevent XSS. 
+  // Removes <script> tags, event handlers, and javascript: URIs.
+  // Note: For production apps, consider using a robust library like DOMPurify.
+  return html.replace(/<script\b[^>]*>([\s\S]*?)<\/script>/gim, "").replace(/ on\w+=/gim, " data-blocked-event=").replace(/javascript:/gim, "blocked:");
+}
+
+/***/ },
+
+/***/ "./src/runtime-core/directives/on.ts"
+/*!*******************************************!*\
+  !*** ./src/runtime-core/directives/on.ts ***!
+  \*******************************************/
+(__unused_webpack_module, __webpack_exports__, __webpack_require__) {
+
+__webpack_require__.r(__webpack_exports__);
+/* harmony export */ __webpack_require__.d(__webpack_exports__, {
+/* harmony export */   cOn: () => (/* binding */ cOn)
+/* harmony export */ });
+// <!-- Prevents default form submission -->
+// <form @submit.prevent="handleSubmit">...</form>
+
+// <!-- Stops click propagation -->
+// <button @click.stop="doSomething">Click me</button>
+
+// <!-- Chain modifiers -->
+// <a @click.stop.prevent="doSomething">Link</a>
+
+//import { cOn } from './on'; // Self-reference for type check if needed, or just export
+
+function cOn(el, event, handler, modifiers) {
+  var options = {};
+  var mods = new Set(modifiers);
+
+  // if (modifiers.includes('capture')) options.capture = true;
+  // if (modifiers.includes('once')) options.once = true;
+  // if (modifiers.includes('passive')) options.passive = true;
+
+  // if (mods.has('capture')) options.capture = true;
+  // if (mods.has('once')) options.once = true;
+  // if (mods.has('passive')) options.passive = true;
+
+  options.capture = mods.has('capture');
+  options.once = mods.has('once');
+  options.passive = mods.has('passive');
+  var stop = mods.has('stop');
+  var prevent = mods.has('prevent');
+  var self = mods.has('self');
+  var listener = function listener(e) {
+    //   if (modifiers.includes('stop')) e.stopPropagation();
+    // if (modifiers.includes('prevent')) e.preventDefault();
+    // if (modifiers.includes('self') && e.target !== el) return;
+    if (stop) e.stopPropagation();
+    if (prevent) e.preventDefault();
+    if (self && e.target !== el) return;
+    handler(e);
+  };
+  el.addEventListener(event, listener, options);
 }
 
 /***/ },
@@ -5224,66 +5474,74 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   BEFORE_MOUNT: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.BEFORE_MOUNT),
 /* harmony export */   BEFORE_UNMOUNT: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.BEFORE_UNMOUNT),
 /* harmony export */   BEFORE_UPDATE: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.BEFORE_UPDATE),
-/* harmony export */   CanElement: () => (/* reexport safe */ _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_19__.CanElement),
+/* harmony export */   CanElement: () => (/* reexport safe */ _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_27__.CanElement),
 /* harmony export */   Component: () => (/* reexport safe */ _runtime_core_Component__WEBPACK_IMPORTED_MODULE_0__.Component),
-/* harmony export */   DevToolsEvents: () => (/* reexport safe */ _devtools_index__WEBPACK_IMPORTED_MODULE_24__.DevToolsEvents),
+/* harmony export */   DevToolsEvents: () => (/* reexport safe */ _devtools_index__WEBPACK_IMPORTED_MODULE_32__.DevToolsEvents),
 /* harmony export */   ERROR_CAPTURED: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.ERROR_CAPTURED),
-/* harmony export */   EffectScope: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.EffectScope),
-/* harmony export */   EventEmitter: () => (/* reexport safe */ _devtools_index__WEBPACK_IMPORTED_MODULE_24__.EventEmitter),
+/* harmony export */   EffectScope: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.EffectScope),
+/* harmony export */   EventEmitter: () => (/* reexport safe */ _devtools_index__WEBPACK_IMPORTED_MODULE_32__.EventEmitter),
 /* harmony export */   Form: () => (/* reexport safe */ _runtime_core_formComponents__WEBPACK_IMPORTED_MODULE_5__.Form),
 /* harmony export */   FormInput: () => (/* reexport safe */ _runtime_core_formComponents__WEBPACK_IMPORTED_MODULE_5__.FormInput),
 /* harmony export */   Fragment: () => (/* reexport safe */ _runtime_core_h__WEBPACK_IMPORTED_MODULE_10__.Fragment),
 /* harmony export */   LifecycleHooks: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.LifecycleHooks),
 /* harmony export */   MOUNTED: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.MOUNTED),
-/* harmony export */   NOOP: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.NOOP),
-/* harmony export */   Router: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_22__.Router),
-/* harmony export */   RouterLink: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_22__.RouterLink),
-/* harmony export */   RouterView: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_22__.RouterView),
-/* harmony export */   SOME_CONSTANT: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.SOME_CONSTANT),
-/* harmony export */   Store: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_23__.Store),
+/* harmony export */   NOOP: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.NOOP),
+/* harmony export */   Router: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_30__.Router),
+/* harmony export */   RouterLink: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_30__.RouterLink),
+/* harmony export */   RouterView: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_30__.RouterView),
+/* harmony export */   SOME_CONSTANT: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.SOME_CONSTANT),
+/* harmony export */   Store: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_31__.Store),
 /* harmony export */   Timeline: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.Timeline),
 /* harmony export */   UNMOUNTED: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.UNMOUNTED),
 /* harmony export */   UPDATED: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.UPDATED),
 /* harmony export */   animate: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.animate),
 /* harmony export */   cAnimate: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.cAnimate),
+/* harmony export */   cHtml: () => (/* reexport safe */ _runtime_core_directives_html__WEBPACK_IMPORTED_MODULE_16__.cHtml),
+/* harmony export */   cModel: () => (/* reexport safe */ _runtime_core_directives_cModelRuntime__WEBPACK_IMPORTED_MODULE_18__.cModel),
+/* harmony export */   cOn: () => (/* reexport safe */ _runtime_core_directives_on__WEBPACK_IMPORTED_MODULE_14__.cOn),
+/* harmony export */   cPortal: () => (/* reexport safe */ _runtime_core_directives_cPortalRuntime__WEBPACK_IMPORTED_MODULE_20__.cPortal),
+/* harmony export */   cRef: () => (/* reexport safe */ _runtime_core_directives_Cref__WEBPACK_IMPORTED_MODULE_15__.cRef),
+/* harmony export */   cValidate: () => (/* reexport safe */ _runtime_core_directives_cValidateRuntime__WEBPACK_IMPORTED_MODULE_19__.cValidate),
 /* harmony export */   callWithAsyncErrorHandling: () => (/* reexport safe */ _runtime_core_errorHandling__WEBPACK_IMPORTED_MODULE_8__.callWithAsyncErrorHandling),
 /* harmony export */   callWithErrorHandling: () => (/* reexport safe */ _runtime_core_errorHandling__WEBPACK_IMPORTED_MODULE_8__.callWithErrorHandling),
-/* harmony export */   computed: () => (/* reexport safe */ _reactivity_computed__WEBPACK_IMPORTED_MODULE_13__.computed),
+/* harmony export */   computed: () => (/* reexport safe */ _reactivity_computed__WEBPACK_IMPORTED_MODULE_21__.computed),
 /* harmony export */   createApp: () => (/* reexport safe */ _runtime_core_apiCreateApp__WEBPACK_IMPORTED_MODULE_2__.createApp),
+/* harmony export */   createComponent: () => (/* reexport safe */ _runtime_core_componentUtils__WEBPACK_IMPORTED_MODULE_13__.createComponent),
 /* harmony export */   createContext: () => (/* reexport safe */ _runtime_core_apiInject__WEBPACK_IMPORTED_MODULE_1__.createContext),
 /* harmony export */   createForm: () => (/* reexport safe */ _runtime_core_form__WEBPACK_IMPORTED_MODULE_4__.createForm),
 /* harmony export */   createI18n: () => (/* reexport safe */ _runtime_core_i18n__WEBPACK_IMPORTED_MODULE_6__.createI18n),
 /* harmony export */   createMicroApp: () => (/* reexport safe */ _runtime_core_microApp__WEBPACK_IMPORTED_MODULE_7__.createMicroApp),
-/* harmony export */   createRouter: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_22__.createRouter),
-/* harmony export */   createStore: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_23__.createStore),
-/* harmony export */   createStoreModule: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_23__.createStoreModule),
+/* harmony export */   createRouter: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_30__.createRouter),
+/* harmony export */   createStore: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_31__.createStore),
+/* harmony export */   createStoreModule: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_31__.createStoreModule),
 /* harmony export */   currentInstance: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.currentInstance),
 /* harmony export */   defineComponent: () => (/* reexport safe */ _runtime_core_Component__WEBPACK_IMPORTED_MODULE_0__.defineComponent),
-/* harmony export */   defineCustomElement: () => (/* reexport safe */ _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_19__.defineCustomElement),
-/* harmony export */   devtools: () => (/* reexport safe */ _devtools_index__WEBPACK_IMPORTED_MODULE_24__.devtools),
-/* harmony export */   effect: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.effect),
+/* harmony export */   defineCustomElement: () => (/* reexport safe */ _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_27__.defineCustomElement),
+/* harmony export */   devtools: () => (/* reexport safe */ _devtools_index__WEBPACK_IMPORTED_MODULE_32__.devtools),
+/* harmony export */   effect: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.effect),
 /* harmony export */   enter: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.enter),
-/* harmony export */   escapeHtml: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.escapeHtml),
-/* harmony export */   extend: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.extend),
-/* harmony export */   extractAttributesAsProps: () => (/* reexport safe */ _runtime_dom_attributeUtils__WEBPACK_IMPORTED_MODULE_21__.extractAttributesAsProps),
+/* harmony export */   escapeHtml: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.escapeHtml),
+/* harmony export */   extend: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.extend),
+/* harmony export */   extractAttributesAsProps: () => (/* reexport safe */ _runtime_dom_attributeUtils__WEBPACK_IMPORTED_MODULE_29__.extractAttributesAsProps),
+/* harmony export */   getDirective: () => (/* reexport safe */ _runtime_core_directives_directiveRegistry__WEBPACK_IMPORTED_MODULE_17__.getDirective),
 /* harmony export */   h: () => (/* reexport safe */ _runtime_core_h__WEBPACK_IMPORTED_MODULE_10__.h),
 /* harmony export */   handleError: () => (/* reexport safe */ _runtime_core_errorHandling__WEBPACK_IMPORTED_MODULE_8__.handleError),
-/* harmony export */   hasChanged: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.hasChanged),
+/* harmony export */   hasChanged: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.hasChanged),
 /* harmony export */   inject: () => (/* reexport safe */ _runtime_core_apiInject__WEBPACK_IMPORTED_MODULE_1__.inject),
 /* harmony export */   injectHook: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.injectHook),
-/* harmony export */   isArray: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.isArray),
-/* harmony export */   isFunction: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.isFunction),
-/* harmony export */   isObject: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.isObject),
-/* harmony export */   isReactive: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.isReactive),
-/* harmony export */   isReadonly: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.isReadonly),
-/* harmony export */   isRef: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.isRef),
-/* harmony export */   isShallow: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.isShallow),
-/* harmony export */   isSignal: () => (/* reexport safe */ _reactivity_signal__WEBPACK_IMPORTED_MODULE_15__.isSignal),
-/* harmony export */   isString: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.isString),
+/* harmony export */   isArray: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.isArray),
+/* harmony export */   isFunction: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.isFunction),
+/* harmony export */   isObject: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.isObject),
+/* harmony export */   isReactive: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.isReactive),
+/* harmony export */   isReadonly: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.isReadonly),
+/* harmony export */   isRef: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.isRef),
+/* harmony export */   isShallow: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.isShallow),
+/* harmony export */   isSignal: () => (/* reexport safe */ _reactivity_signal__WEBPACK_IMPORTED_MODULE_23__.isSignal),
+/* harmony export */   isString: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.isString),
 /* harmony export */   leave: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.leave),
-/* harmony export */   markRaw: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.markRaw),
-/* harmony export */   nativeElementMap: () => (/* reexport safe */ _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_19__.nativeElementMap),
-/* harmony export */   nextTick: () => (/* reexport safe */ _runtime_dom_nextTick__WEBPACK_IMPORTED_MODULE_20__.nextTick),
+/* harmony export */   markRaw: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.markRaw),
+/* harmony export */   nativeElementMap: () => (/* reexport safe */ _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_27__.nativeElementMap),
+/* harmony export */   nextTick: () => (/* reexport safe */ _runtime_dom_nextTick__WEBPACK_IMPORTED_MODULE_28__.nextTick),
 /* harmony export */   onBeforeMount: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.onBeforeMount),
 /* harmony export */   onBeforeUnmount: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.onBeforeUnmount),
 /* harmony export */   onBeforeUpdate: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.onBeforeUpdate),
@@ -5291,31 +5549,32 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   onMounted: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.onMounted),
 /* harmony export */   onUnmounted: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.onUnmounted),
 /* harmony export */   onUpdated: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.onUpdated),
-/* harmony export */   parseAttributeValue: () => (/* reexport safe */ _runtime_dom_attributeUtils__WEBPACK_IMPORTED_MODULE_21__.parseAttributeValue),
+/* harmony export */   parseAttributeValue: () => (/* reexport safe */ _runtime_dom_attributeUtils__WEBPACK_IMPORTED_MODULE_29__.parseAttributeValue),
 /* harmony export */   provide: () => (/* reexport safe */ _runtime_core_apiInject__WEBPACK_IMPORTED_MODULE_1__.provide),
-/* harmony export */   proxyRefs: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.proxyRefs),
+/* harmony export */   proxyRefs: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.proxyRefs),
 /* harmony export */   queueJob: () => (/* reexport safe */ _runtime_core_scheduler__WEBPACK_IMPORTED_MODULE_11__.queueJob),
-/* harmony export */   reactive: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.reactive),
-/* harmony export */   readonly: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.readonly),
-/* harmony export */   ref: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.ref),
+/* harmony export */   reactive: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.reactive),
+/* harmony export */   readonly: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.readonly),
+/* harmony export */   ref: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.ref),
+/* harmony export */   registerDirective: () => (/* reexport safe */ _runtime_core_directives_directiveRegistry__WEBPACK_IMPORTED_MODULE_17__.registerDirective),
 /* harmony export */   setCurrentInstance: () => (/* reexport safe */ _runtime_core_apiLifecycle__WEBPACK_IMPORTED_MODULE_9__.setCurrentInstance),
-/* harmony export */   shallowReactive: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.shallowReactive),
-/* harmony export */   shallowReadonly: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.shallowReadonly),
-/* harmony export */   shallowRef: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.shallowRef),
-/* harmony export */   shallowSignal: () => (/* reexport safe */ _reactivity_signal__WEBPACK_IMPORTED_MODULE_15__.shallowSignal),
-/* harmony export */   signal: () => (/* reexport safe */ _reactivity_signal__WEBPACK_IMPORTED_MODULE_15__.signal),
+/* harmony export */   shallowReactive: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.shallowReactive),
+/* harmony export */   shallowReadonly: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.shallowReadonly),
+/* harmony export */   shallowRef: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.shallowRef),
+/* harmony export */   shallowSignal: () => (/* reexport safe */ _reactivity_signal__WEBPACK_IMPORTED_MODULE_23__.shallowSignal),
+/* harmony export */   signal: () => (/* reexport safe */ _reactivity_signal__WEBPACK_IMPORTED_MODULE_23__.signal),
 /* harmony export */   stagger: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.stagger),
 /* harmony export */   t: () => (/* reexport safe */ _runtime_core_i18n__WEBPACK_IMPORTED_MODULE_6__.t),
-/* harmony export */   targetMap: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.targetMap),
-/* harmony export */   toRaw: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.toRaw),
-/* harmony export */   toRef: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.toRef),
-/* harmony export */   toRefs: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.toRefs),
-/* harmony export */   track: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.track),
-/* harmony export */   trackEffects: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.trackEffects),
-/* harmony export */   traverse: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__.traverse),
-/* harmony export */   trigger: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.trigger),
-/* harmony export */   triggerEffects: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.triggerEffects),
-/* harmony export */   unref: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__.unref),
+/* harmony export */   targetMap: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.targetMap),
+/* harmony export */   toRaw: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.toRaw),
+/* harmony export */   toRef: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.toRef),
+/* harmony export */   toRefs: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.toRefs),
+/* harmony export */   track: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.track),
+/* harmony export */   trackEffects: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.trackEffects),
+/* harmony export */   traverse: () => (/* reexport safe */ _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__.traverse),
+/* harmony export */   trigger: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.trigger),
+/* harmony export */   triggerEffects: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.triggerEffects),
+/* harmony export */   unref: () => (/* reexport safe */ _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__.unref),
 /* harmony export */   useAnimate: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useAnimate),
 /* harmony export */   useAsyncState: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useAsyncState),
 /* harmony export */   useBattery: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useBattery),
@@ -5353,15 +5612,15 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   useParallax: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useParallax),
 /* harmony export */   usePreferredDark: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.usePreferredDark),
 /* harmony export */   useReducer: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useReducer),
-/* harmony export */   useRoute: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_22__.useRoute),
-/* harmony export */   useRouter: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_22__.useRouter),
+/* harmony export */   useRoute: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_30__.useRoute),
+/* harmony export */   useRouter: () => (/* reexport safe */ _router_index__WEBPACK_IMPORTED_MODULE_30__.useRouter),
 /* harmony export */   useScriptTag: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useScriptTag),
 /* harmony export */   useScroll: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useScroll),
 /* harmony export */   useShare: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useShare),
 /* harmony export */   useSound: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useSound),
 /* harmony export */   useSpeechRecognition: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useSpeechRecognition),
 /* harmony export */   useSpring: () => (/* reexport safe */ _runtime_core_animation__WEBPACK_IMPORTED_MODULE_3__.useSpring),
-/* harmony export */   useStore: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_23__.useStore),
+/* harmony export */   useStore: () => (/* reexport safe */ _store_index__WEBPACK_IMPORTED_MODULE_31__.useStore),
 /* harmony export */   useSwipe: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useSwipe),
 /* harmony export */   useThrottle: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useThrottle),
 /* harmony export */   useTimeout: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useTimeout),
@@ -5373,9 +5632,9 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   useWakeLock: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useWakeLock),
 /* harmony export */   useWebP: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useWebP),
 /* harmony export */   useWindowSize: () => (/* reexport safe */ _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__.useWindowSize),
-/* harmony export */   warn: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_25__.warn),
-/* harmony export */   watch: () => (/* reexport safe */ _reactivity_watch__WEBPACK_IMPORTED_MODULE_18__.watch),
-/* harmony export */   watchEffect: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__.effect)
+/* harmony export */   warn: () => (/* reexport safe */ _shared_index__WEBPACK_IMPORTED_MODULE_33__.warn),
+/* harmony export */   watch: () => (/* reexport safe */ _reactivity_watch__WEBPACK_IMPORTED_MODULE_26__.watch),
+/* harmony export */   watchEffect: () => (/* reexport safe */ _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__.effect)
 /* harmony export */ });
 /* harmony import */ var _runtime_core_Component__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./runtime-core/Component */ "./src/runtime-core/Component.ts");
 /* harmony import */ var _runtime_core_apiInject__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./runtime-core/apiInject */ "./src/runtime-core/apiInject.ts");
@@ -5390,19 +5649,27 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _runtime_core_h__WEBPACK_IMPORTED_MODULE_10__ = __webpack_require__(/*! ./runtime-core/h */ "./src/runtime-core/h.ts");
 /* harmony import */ var _runtime_core_scheduler__WEBPACK_IMPORTED_MODULE_11__ = __webpack_require__(/*! ./runtime-core/scheduler */ "./src/runtime-core/scheduler.ts");
 /* harmony import */ var _runtime_core_composables__WEBPACK_IMPORTED_MODULE_12__ = __webpack_require__(/*! ./runtime-core/composables */ "./src/runtime-core/composables.ts");
-/* harmony import */ var _reactivity_computed__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./reactivity/computed */ "./src/reactivity/computed.ts");
-/* harmony import */ var _reactivity_effect__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./reactivity/effect */ "./src/reactivity/effect.ts");
-/* harmony import */ var _reactivity_signal__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./reactivity/signal */ "./src/reactivity/signal.ts");
-/* harmony import */ var _reactivity_reactive__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./reactivity/reactive */ "./src/reactivity/reactive.ts");
-/* harmony import */ var _reactivity_ref__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./reactivity/ref */ "./src/reactivity/ref.ts");
-/* harmony import */ var _reactivity_watch__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./reactivity/watch */ "./src/reactivity/watch.ts");
-/* harmony import */ var _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./runtime-dom/customElement */ "./src/runtime-dom/customElement.ts");
-/* harmony import */ var _runtime_dom_nextTick__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./runtime-dom/nextTick */ "./src/runtime-dom/nextTick.ts");
-/* harmony import */ var _runtime_dom_attributeUtils__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./runtime-dom/attributeUtils */ "./src/runtime-dom/attributeUtils.ts");
-/* harmony import */ var _router_index__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./router/index */ "./src/router/index.ts");
-/* harmony import */ var _store_index__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./store/index */ "./src/store/index.ts");
-/* harmony import */ var _devtools_index__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./devtools/index */ "./src/devtools/index.ts");
-/* harmony import */ var _shared_index__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./shared/index */ "./src/shared/index.ts");
+/* harmony import */ var _runtime_core_componentUtils__WEBPACK_IMPORTED_MODULE_13__ = __webpack_require__(/*! ./runtime-core/componentUtils */ "./src/runtime-core/componentUtils.ts");
+/* harmony import */ var _runtime_core_directives_on__WEBPACK_IMPORTED_MODULE_14__ = __webpack_require__(/*! ./runtime-core/directives/on */ "./src/runtime-core/directives/on.ts");
+/* harmony import */ var _runtime_core_directives_Cref__WEBPACK_IMPORTED_MODULE_15__ = __webpack_require__(/*! ./runtime-core/directives/Cref */ "./src/runtime-core/directives/Cref.ts");
+/* harmony import */ var _runtime_core_directives_html__WEBPACK_IMPORTED_MODULE_16__ = __webpack_require__(/*! ./runtime-core/directives/html */ "./src/runtime-core/directives/html.ts");
+/* harmony import */ var _runtime_core_directives_directiveRegistry__WEBPACK_IMPORTED_MODULE_17__ = __webpack_require__(/*! ./runtime-core/directives/directiveRegistry */ "./src/runtime-core/directives/directiveRegistry.ts");
+/* harmony import */ var _runtime_core_directives_cModelRuntime__WEBPACK_IMPORTED_MODULE_18__ = __webpack_require__(/*! ./runtime-core/directives/cModelRuntime */ "./src/runtime-core/directives/cModelRuntime.ts");
+/* harmony import */ var _runtime_core_directives_cValidateRuntime__WEBPACK_IMPORTED_MODULE_19__ = __webpack_require__(/*! ./runtime-core/directives/cValidateRuntime */ "./src/runtime-core/directives/cValidateRuntime.ts");
+/* harmony import */ var _runtime_core_directives_cPortalRuntime__WEBPACK_IMPORTED_MODULE_20__ = __webpack_require__(/*! ./runtime-core/directives/cPortalRuntime */ "./src/runtime-core/directives/cPortalRuntime.ts");
+/* harmony import */ var _reactivity_computed__WEBPACK_IMPORTED_MODULE_21__ = __webpack_require__(/*! ./reactivity/computed */ "./src/reactivity/computed.ts");
+/* harmony import */ var _reactivity_effect__WEBPACK_IMPORTED_MODULE_22__ = __webpack_require__(/*! ./reactivity/effect */ "./src/reactivity/effect.ts");
+/* harmony import */ var _reactivity_signal__WEBPACK_IMPORTED_MODULE_23__ = __webpack_require__(/*! ./reactivity/signal */ "./src/reactivity/signal.ts");
+/* harmony import */ var _reactivity_reactive__WEBPACK_IMPORTED_MODULE_24__ = __webpack_require__(/*! ./reactivity/reactive */ "./src/reactivity/reactive.ts");
+/* harmony import */ var _reactivity_ref__WEBPACK_IMPORTED_MODULE_25__ = __webpack_require__(/*! ./reactivity/ref */ "./src/reactivity/ref.ts");
+/* harmony import */ var _reactivity_watch__WEBPACK_IMPORTED_MODULE_26__ = __webpack_require__(/*! ./reactivity/watch */ "./src/reactivity/watch.ts");
+/* harmony import */ var _runtime_dom_customElement__WEBPACK_IMPORTED_MODULE_27__ = __webpack_require__(/*! ./runtime-dom/customElement */ "./src/runtime-dom/customElement.ts");
+/* harmony import */ var _runtime_dom_nextTick__WEBPACK_IMPORTED_MODULE_28__ = __webpack_require__(/*! ./runtime-dom/nextTick */ "./src/runtime-dom/nextTick.ts");
+/* harmony import */ var _runtime_dom_attributeUtils__WEBPACK_IMPORTED_MODULE_29__ = __webpack_require__(/*! ./runtime-dom/attributeUtils */ "./src/runtime-dom/attributeUtils.ts");
+/* harmony import */ var _router_index__WEBPACK_IMPORTED_MODULE_30__ = __webpack_require__(/*! ./router/index */ "./src/router/index.ts");
+/* harmony import */ var _store_index__WEBPACK_IMPORTED_MODULE_31__ = __webpack_require__(/*! ./store/index */ "./src/store/index.ts");
+/* harmony import */ var _devtools_index__WEBPACK_IMPORTED_MODULE_32__ = __webpack_require__(/*! ./devtools/index */ "./src/devtools/index.ts");
+/* harmony import */ var _shared_index__WEBPACK_IMPORTED_MODULE_33__ = __webpack_require__(/*! ./shared/index */ "./src/shared/index.ts");
 // Runtime Core
  // Includes defineComponent
 
@@ -5414,6 +5681,14 @@ __webpack_require__.r(__webpack_exports__);
 
 
 
+
+
+
+
+
+
+
+ // Includes getDirective
 
 
 
@@ -5947,10 +6222,17 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   VERSION: () => (/* binding */ VERSION),
 /* harmony export */   animate: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.animate),
 /* harmony export */   cAnimate: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cAnimate),
+/* harmony export */   cHtml: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cHtml),
+/* harmony export */   cModel: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cModel),
+/* harmony export */   cOn: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cOn),
+/* harmony export */   cPortal: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cPortal),
+/* harmony export */   cRef: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cRef),
+/* harmony export */   cValidate: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.cValidate),
 /* harmony export */   callWithAsyncErrorHandling: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.callWithAsyncErrorHandling),
 /* harmony export */   callWithErrorHandling: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.callWithErrorHandling),
 /* harmony export */   computed: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.computed),
 /* harmony export */   createApp: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.createApp),
+/* harmony export */   createComponent: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.createComponent),
 /* harmony export */   createContext: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.createContext),
 /* harmony export */   createForm: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.createForm),
 /* harmony export */   createI18n: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.createI18n),
@@ -5967,6 +6249,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   escapeHtml: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.escapeHtml),
 /* harmony export */   extend: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.extend),
 /* harmony export */   extractAttributesAsProps: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.extractAttributesAsProps),
+/* harmony export */   getDirective: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.getDirective),
 /* harmony export */   h: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.h),
 /* harmony export */   handleError: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.handleError),
 /* harmony export */   hasChanged: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.hasChanged),
@@ -5999,6 +6282,7 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export */   reactive: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.reactive),
 /* harmony export */   readonly: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.readonly),
 /* harmony export */   ref: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.ref),
+/* harmony export */   registerDirective: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.registerDirective),
 /* harmony export */   setCurrentInstance: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.setCurrentInstance),
 /* harmony export */   shallowReactive: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.shallowReactive),
 /* harmony export */   shallowReadonly: () => (/* reexport safe */ _runtime_helpers__WEBPACK_IMPORTED_MODULE_0__.shallowReadonly),
@@ -6087,7 +6371,7 @@ __webpack_require__.r(__webpack_exports__);
 
 
 // Export version or other metadata if needed
-var VERSION = '1.1.5';
+var VERSION = '1.1.6';
 })();
 
 /******/ 	return __webpack_exports__;

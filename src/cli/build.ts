@@ -20,6 +20,22 @@ export function fixImports(code: string, fullPath: string): string {
     // Strip shebangs WITHOUT removing the newline. This keeps line numbers aligned.
     let fixed = code.replace(/^#!.*/, '');
 
+    // Calculate relative path to the root of the project (dist folder)
+    const cwd = process.cwd();
+    const srcDir = path.join(cwd, 'src');
+    const relativeToSrc = path.relative(path.dirname(fullPath), srcDir);
+
+    // If we are in src or a subfolder of src, we need to point to the root can-framework.mjs
+    // If relativeToSrc is empty, it's '.', if it's 'components', it's '..'
+    let runtimePath = relativeToSrc === '' ? '.' : relativeToSrc.replace(/\\/g, '/');
+    if (!runtimePath.startsWith('.')) runtimePath = './' + runtimePath;
+    const frameworkImport = `${runtimePath}/can-framework.mjs`;
+
+    // 0. Handle bare framework imports: convert @decaspace/can-framework to relative runtime path
+    fixed = fixed.replace(/(from|import|export)\s+(['"])@decaspace\/can-framework\2/g, (match, p1, p2) => {
+        return `${p1} ${p2}${frameworkImport}${p2}`;
+    });
+
     // 1. Handle standard imports/exports: import {x} from './y' or export {x} from './y'
     // Added a check to prevent double .mjs extensions
     fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.(?:js|can|ts|mjs))?\2/g, (match, p1, p2, p3) => {
@@ -45,6 +61,14 @@ export function fixImports(code: string, fullPath: string): string {
 function getTsTransformers(fullPath: string): ts.CustomTransformers {
     const isExample = fullPath.includes(path.sep + 'examples' + path.sep);
 
+    // Calculate path depth for framework import
+    const cwd = process.cwd();
+    const srcDir = path.join(cwd, 'src');
+    const relativeToSrc = path.relative(path.dirname(fullPath), srcDir);
+    let runtimePath = relativeToSrc === '' ? '.' : relativeToSrc.replace(/\\/g, '/');
+    if (!runtimePath.startsWith('.')) runtimePath = './' + runtimePath;
+    const frameworkImport = `${runtimePath}/can-framework.mjs`;
+
     const transformer = (context: ts.TransformationContext) => {
         return (sourceFile: ts.SourceFile) => {
             function visitor(node: ts.Node): ts.Node {
@@ -52,6 +76,10 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
                 if (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) {
                     if (node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
                         let specifier = node.moduleSpecifier.text;
+                        // Handle bare framework import
+                        if (specifier === '@decaspace/can-framework') {
+                            specifier = frameworkImport;
+                        }
                         if (specifier.startsWith('.')) {
                             // Apply example path fix
                             if (isExample) {
@@ -349,6 +377,19 @@ export async function build(targets?: string[], minify: boolean = false) {
 
     process.stdout.write('\n');
     console.log(`\x1b[32mBuild finished.\x1b[0m ${context.built} files updated, ${context.skipped} skipped.`);
+
+    // Copy framework runtime to project dist
+    const frameworkDist = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+    const runtimeFiles = ['index.mjs', 'runtime-helpers.mjs', 'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'];
+
+    runtimeFiles.forEach(file => {
+        const src = path.join(frameworkDist, file);
+        const dest = path.join(distDir, file === 'index.mjs' ? 'can-framework.mjs' : file);
+        if (fs.existsSync(src)) {
+            if (fs.statSync(src).isDirectory()) fs.cpSync(src, dest, { recursive: true });
+            else fs.copyFileSync(src, dest);
+        }
+    });
 
     // Handle public/index.html injection for production
     const publicDir = path.join(cwd, 'public');

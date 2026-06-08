@@ -1,7 +1,7 @@
 import { parse } from './sfc';
 import { CompilerPlugin } from './plugin';
 import { compileStyle } from './stylePlugin';
-import { generate ,genSingleNode} from './codegenerate/generate';
+import { generate, genSingleNode } from './codegenerate/generate';
 import { transformElement } from './transform/transformElement';
 
 import { Node, NodeTypes } from './ast';
@@ -10,7 +10,7 @@ import { cForPlugin } from './directives/c-for';
 import { cBindPlugin } from './directives/c-bind';
 import { cModelPlugin } from './directives/c-model';
 import { cSlotPlugin } from './directives/c-slot';
-import { cShowPlugin } from './directives/c-show'; 
+import { cShowPlugin } from './directives/c-show';
 import { cPortalPlugin } from './directives/c-portal';
 import { cValidatePlugin } from './directives/c-validate';
 import { cOncePlugin } from './directives/c-once';
@@ -25,7 +25,7 @@ import * as ts from 'typescript';
  */
 export async function transpile(content: string, plugins: CompilerPlugin[] = [], filename: string = 'anonymous.can'): Promise<{ code: string; map?: string }> {
     // Define base mandatory plugins
-    const basePlugins = [ 
+    const basePlugins = [
         cOncePlugin,
         cSlotPlugin,
         buttonClassPlugin,
@@ -57,74 +57,74 @@ export async function transpile(content: string, plugins: CompilerPlugin[] = [],
     let script = descriptor.script ? descriptor.script.content : '';
     //const scriptExtra = descriptor.script_extra ? descriptor.script_extra.content : '';
 
- 
+
     script = transformScript(script);
 
-//     // 1. Fix class syntax (remove 'function' keyword and 'var/let/const' for properties)
-//    script = script.replace(/(^|\s)function\s+(\w+)/g, '$1$2'); // function onMount() -> onMount()
-//    script = script.replace(/(^|\s)(var|let|const)\s+(\w+)/g, '$1$3'); // var title = ... -> title = ...
-   
+    //     // 1. Fix class syntax (remove 'function' keyword and 'var/let/const' for properties)
+    //    script = script.replace(/(^|\s)function\s+(\w+)/g, '$1$2'); // function onMount() -> onMount()
+    //    script = script.replace(/(^|\s)(var|let|const)\s+(\w+)/g, '$1$3'); // var title = ... -> title = ...
+
 
 
     // 1. Transform destructuring: (var|let|const) { a, b } = call()
     // This is run first to avoid being processed by the simpler regex below.
     // /\b(var|let|const)\s*\{([\s\S]+?)\}\s*=\s*(.+?);/g, 
-//      script = script.replace(/\b(var|let|const)\s*\{([\s\S]+?)\}\s*=\s*([\s\S]+?);/g,
-   
-//         (match: string, keyword: string, variables: string, hookCall: string) => {
-//              // 1. Clean up the variables list
-//             const keys = variables.split(',').map(v => v.trim()).filter(v=>v);
-           
-//             // Create a unique internal name for the hook result
-//          // 2. Extract the hook name properly (e.g., useVirtualList)
-//             const hookNameMatch = hookCall.match(/^(\w+)/);
-//             const hookName = hookNameMatch ? hookNameMatch[1] : 'result';
-              
-//             // 3. Create the internal name
-//             const internalName = `_hook_${hookName}`;
+    //      script = script.replace(/\b(var|let|const)\s*\{([\s\S]+?)\}\s*=\s*([\s\S]+?);/g,
 
-//              // 4. Build the output string
-//             // We include the 'const' (or original keyword) to avoid global scope leaks
-//            let output = `${keyword} ${internalName} = ${hookCall.trim()};\n`;
+    //         (match: string, keyword: string, variables: string, hookCall: string) => {
+    //              // 1. Clean up the variables list
+    //             const keys = variables.split(',').map(v => v.trim()).filter(v=>v);
 
-//             keys.forEach(key => {
-//              // Note: Added 'const' here so the destructured vars are actually defined
-//            output += `${keyword} ${key} = ${internalName}.${key};\n`;
-//          });
-//             return output;
-//         }
-//     );
+    //             // Create a unique internal name for the hook result
+    //          // 2. Extract the hook name properly (e.g., useVirtualList)
+    //             const hookNameMatch = hookCall.match(/^(\w+)/);
+    //             const hookName = hookNameMatch ? hookNameMatch[1] : 'result';
+
+    //             // 3. Create the internal name
+    //             const internalName = `_hook_${hookName}`;
+
+    //              // 4. Build the output string
+    //             // We include the 'const' (or original keyword) to avoid global scope leaks
+    //            let output = `${keyword} ${internalName} = ${hookCall.trim()};\n`;
+
+    //             keys.forEach(key => {
+    //              // Note: Added 'const' here so the destructured vars are actually defined
+    //            output += `${keyword} ${key} = ${internalName}.${key};\n`;
+    //          });
+    //             return output;
+    //         }
+    //     );
 
 
-// script = script.replace(/\b(var|let|const)\s*\[([\s\S]+?)\]\s*=\s*([\s\S]+?);/g, 
-//         (match: string, keyword: string, variables: string, hookCall: string) => {
-    
-//         // 1. Clean up the variable names (count, dispatch)
-//          const keys = variables.split(',').map(v => v.trim()).filter(v => v);
+    // script = script.replace(/\b(var|let|const)\s*\[([\s\S]+?)\]\s*=\s*([\s\S]+?);/g, 
+    //         (match: string, keyword: string, variables: string, hookCall: string) => {
 
-//     // 2. Extract hook name (e.g., useReducer)
-//     const hookNameMatch = hookCall.match(/^(\w+)/);
-//     const hookName = hookNameMatch ? hookNameMatch[1] : 'result';
-//     const internalName = `_hook_${hookName}`;
+    //         // 1. Clean up the variable names (count, dispatch)
+    //          const keys = variables.split(',').map(v => v.trim()).filter(v => v);
 
-//     // 3. Create the assignment for the hook call itself
-//     let output = `${keyword} ${internalName} = ${hookCall.trim()};\n`;
+    //     // 2. Extract hook name (e.g., useReducer)
+    //     const hookNameMatch = hookCall.match(/^(\w+)/);
+    //     const hookName = hookNameMatch ? hookNameMatch[1] : 'result';
+    //     const internalName = `_hook_${hookName}`;
 
-//     // 4. Create index-based assignments for the array elements
-//     keys.forEach((key, index) => {
-//         // [count, dispatch] -> count = _hook[0], dispatch = _hook[1]
-//         output += `${keyword} ${key} = ${internalName}[${index}];\n`;
-//     });
+    //     // 3. Create the assignment for the hook call itself
+    //     let output = `${keyword} ${internalName} = ${hookCall.trim()};\n`;
 
-//     return output;
-// });
+    //     // 4. Create index-based assignments for the array elements
+    //     keys.forEach((key, index) => {
+    //         // [count, dispatch] -> count = _hook[0], dispatch = _hook[1]
+    //         output += `${keyword} ${key} = ${internalName}[${index}];\n`;
+    //     });
 
-//     // 2. Remove var/let/const from simple declarations (e.g., var x = 1 or let y;)
-//     // This is safer for things like `for (let i=0...)` because it requires a space or
-//     // start of line before the keyword, which is not present inside `for (...)`.
-//     script = script.replace(/(^|\s)(var|let|const)\s+([a-zA-Z_$][\w$]*)/g, '$1$3');
+    //     return output;
+    // });
 
- 
+    //     // 2. Remove var/let/const from simple declarations (e.g., var x = 1 or let y;)
+    //     // This is safer for things like `for (let i=0...)` because it requires a space or
+    //     // start of line before the keyword, which is not present inside `for (...)`.
+    //     script = script.replace(/(^|\s)(var|let|const)\s+([a-zA-Z_$][\w$]*)/g, '$1$3');
+
+
 
 
 
@@ -151,7 +151,7 @@ export async function transpile(content: string, plugins: CompilerPlugin[] = [],
             return style.content;
         });
         const css = (await Promise.all(cssPromises)).join('\n');
-        
+
         // Simple runtime injection
         cssInjectionCode = `
 const _scopeId = '${descriptor.scopeId}';
@@ -164,20 +164,26 @@ if (!_style) {
 _style.textContent = \`${css.replace(/`/g, '\\`')}\`;`;
     }
 
-   // Generate the output template
-   const outputTemplate= `import { Component } from '../runtime-core/Component';
-import { effect } from '../reactivity/effect';
-import { useTransition } from '../runtime-core/animation';
-import { createComponent } from '../runtime-core/componentUtils';
-import { t } from '../runtime-core/i18n';
-import { cHtml } from '../runtime-core/html';
-import { getDirective } from '../runtime-core/directives/directiveRegistry'; // New import
-import { cOn } from '../runtime-core/on';
-import { cRef } from '../runtime-core/Cref';
-import { defineCustomElement, nativeElementMap } from '../runtime-dom/customElement';
-import { cModel } from '../runtime-core/directives/cModelRuntime';
-import { cValidate } from '../runtime-core/directives/cValidateRuntime';
-import { cPortal } from '../runtime-core/directives/cPortalRuntime';
+    //       const outputTemplate= `import { Component } from '../runtime-core/Component';
+    // import { effect } from '../reactivity/effect';
+    // import { useTransition } from '../runtime-core/animation';
+    // import { createComponent } from '../runtime-core/componentUtils';
+    // import { t } from '../runtime-core/i18n';
+    // import { cHtml } from '../runtime-core/html';
+    // import { getDirective } from '../runtime-core/directives/directiveRegistry'; // New import
+    // import { cOn } from '../runtime-core/on';
+    // import { cRef } from '../runtime-core/Cref';
+    // import { defineCustomElement, nativeElementMap } from '../runtime-dom/customElement';
+    // import { cModel } from '../runtime-core/directives/cModelRuntime';
+    // import { cValidate } from '../runtime-core/directives/cValidateRuntime';
+    // import { cPortal } from '../runtime-core/directives/cPortalRuntime';
+
+    // Generate the output template
+    const outputTemplate = `import { 
+  Component, effect, useTransition, createComponent, t, cHtml, 
+  getDirective, cOn, cRef, defineCustomElement, nativeElementMap, 
+  cModel, cValidate, cPortal 
+} from '@decaspace/can-framework';
 ${imports}
 
 ${cssInjectionCode}
@@ -208,7 +214,7 @@ return root;\n
 defineCustomElement(_tagName, ${name}, { ..._elementOptions, observedAttributes: _observedAttrs });`;
 
 
-// // Transpile TypeScript to JavaScript using TypeScript compiler
+    // // Transpile TypeScript to JavaScript using TypeScript compiler
     const transpiledOutput = ts.transpileModule(outputTemplate, {
         compilerOptions: {
             target: ts.ScriptTarget.ES2020,
@@ -219,11 +225,11 @@ defineCustomElement(_tagName, ${name}, { ..._elementOptions, observedAttributes:
             skipLibCheck: false,
             noEmit: false,
             noEmitOnError: true,
-            importHelpers:true,
+            importHelpers: true,
             jsx: ts.JsxEmit.None,
-             sourceMap: true,
+            sourceMap: true,
             inlineSources: true
-            
+
         }
     });
 
@@ -237,9 +243,9 @@ defineCustomElement(_tagName, ${name}, { ..._elementOptions, observedAttributes:
 
 export function transformScript(code: string): string {
     if (!code.trim()) return '';
-    
+
     const sourceFile = ts.createSourceFile('script.ts', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
-  
+
     const printer = ts.createPrinter({ omitTrailingSemicolon: true });
     let output = '';
 
@@ -259,9 +265,9 @@ export function transformScript(code: string): string {
 
                 // Example: Transform onMount(() => {}) -> this.onMounted(() => {})
                 // This is safer than the regex version
-                const lifecycleMap: Record<string, string> = { 
-                    'onMount': 'onMounted', 
-                    'onCleanup': 'onCleanup' 
+                const lifecycleMap: Record<string, string> = {
+                    'onMount': 'onMounted',
+                    'onCleanup': 'onCleanup'
                 };
 
                 if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && lifecycleMap[node.expression.text]) {
@@ -310,7 +316,7 @@ export function transformScript(code: string): string {
                     // const x = 1 -> x = 1
                     const prop = ts.factory.createPropertyDeclaration(
                         modifiers || decorators,
-                        decl.name,   
+                        decl.name,
                         undefined,
                         decl.type,
                         decl.initializer
@@ -319,13 +325,13 @@ export function transformScript(code: string): string {
                 } else {
                     // Destructuring: const { a } = hook()
                     // -> _hook_result = hook(); a = this._hook_result.a;
-                    
+
                     let hookName = 'result';
                     if (decl.initializer && ts.isCallExpression(decl.initializer) && ts.isIdentifier(decl.initializer.expression)) {
                         hookName = decl.initializer.expression.text;
                     }
                     const tempName = `_hook_${hookName}`;
-                    
+
                     const tempProp = ts.factory.createPropertyDeclaration(
                         modifiers,
                         tempName,
@@ -337,7 +343,7 @@ export function transformScript(code: string): string {
 
                     const bindings: ts.PropertyDeclaration[] = [];
                     generateBindings(decl.name, ts.factory.createPropertyAccessExpression(ts.factory.createThis(), tempName), bindings, modifiers);
-                    
+
                     bindings.forEach(b => {
                         output += printer.printNode(ts.EmitHint.Unspecified, b, transformedSourceFile) + '\n';
                     });
@@ -348,32 +354,32 @@ export function transformScript(code: string): string {
             output += printer.printNode(ts.EmitHint.Unspecified, statement, transformedSourceFile) + '\n';
         }
     });
-    
+
     return output;
 }
 
 export function generateBindings(
-    name: ts.BindingName, 
-    accessExpr: ts.Expression, 
+    name: ts.BindingName,
+    accessExpr: ts.Expression,
     outputNodes: ts.PropertyDeclaration[],
     modifiers?: ts.NodeArray<ts.ModifierLike>
 ) {
     if (ts.isIdentifier(name)) {
         outputNodes.push(ts.factory.createPropertyDeclaration(
-             modifiers, name, undefined, undefined, accessExpr
+            modifiers, name, undefined, undefined, accessExpr
         ));
     } else if (ts.isObjectBindingPattern(name)) {
         name.elements.forEach(el => {
             if (ts.isBindingElement(el)) {
                 const propName = el.propertyName || el.name;
                 let newAccess: ts.Expression | undefined;
-                
+
                 if (ts.isIdentifier(propName)) {
-                     newAccess = ts.factory.createPropertyAccessExpression(accessExpr, propName);
+                    newAccess = ts.factory.createPropertyAccessExpression(accessExpr, propName);
                 } else if (ts.isStringLiteral(propName) || ts.isNumericLiteral(propName)) {
-                     newAccess = ts.factory.createElementAccessExpression(accessExpr, propName);
+                    newAccess = ts.factory.createElementAccessExpression(accessExpr, propName);
                 } else if (ts.isComputedPropertyName(propName)) {
-                     newAccess = ts.factory.createElementAccessExpression(accessExpr, propName.expression);
+                    newAccess = ts.factory.createElementAccessExpression(accessExpr, propName.expression);
                 }
 
                 if (newAccess) {
@@ -384,8 +390,8 @@ export function generateBindings(
     } else if (ts.isArrayBindingPattern(name)) {
         name.elements.forEach((el, index) => {
             if (ts.isBindingElement(el)) {
-                 const newAccess = ts.factory.createElementAccessExpression(accessExpr, index);
-                 generateBindings(el.name, newAccess, outputNodes, modifiers);
+                const newAccess = ts.factory.createElementAccessExpression(accessExpr, index);
+                generateBindings(el.name, newAccess, outputNodes, modifiers);
             }
         });
     }
@@ -409,7 +415,7 @@ export function transformLifecycleHooks(script: string): string {
         'onUnmounted': 'onUnmounted',
         'onErrorCaptured': 'onErrorCaptured',
     };
-    
+
     for (const [from, to] of Object.entries(lifecycleHooks)) {
         // Match: onMount(() => {...}) or onMount(() => fn())
         const regex = new RegExp(`\\b${from}\\s*\\(\\s*(\\[?.*?\\]?)\\s*\\)`, 'g');
@@ -417,7 +423,7 @@ export function transformLifecycleHooks(script: string): string {
             return `${to}(() => ${callback.replace(/^\\[|\\]$/g, '')})`;
         });
     }
-    
+
     return script;
 }
 
@@ -426,16 +432,16 @@ export function transformLifecycleHooks(script: string): string {
  */
 export function transformProvideInject(script: string): string {
     // Transform: provide('key', value) -> provide('key', value)
-    script = script.replace(/\bprovide\s*\(\s*['"]([^'"]+)['"]\s*,\s*([^)]+)\)/g, 
+    script = script.replace(/\bprovide\s*\(\s*['"]([^'"]+)['"]\s*,\s*([^)]+)\)/g,
         "provide('$1', $2)");
-    
+
     // Transform: inject('key') -> inject('$1')
     script = script.replace(/\binject\s*\(\s*['"]([^'"]+)['"]\s*\)/g, "inject('$1')");
-    
+
     // Transform: inject('key', defaultValue) -> inject('$1', $2)
-    script = script.replace(/\binject\s*\(\s*['"]([^'"]+)['"]\s*,\s*([^)]+)\)/g, 
+    script = script.replace(/\binject\s*\(\s*['"]([^'"]+)['"]\s*,\s*([^)]+)\)/g,
         "inject('$1', $2)");
-    
+
     return script;
 }
 
@@ -446,10 +452,10 @@ export function transformSlots(script: string): string {
     // Transform slot function declarations
     script = script.replace(/\bslot\s*\{/g, 'this.$slots[');
     script = script.replace(/\}\s*\}/g, ']}');
-    
+
     // Handle slot props: slot({ prop }) -> slot['default']({ prop })
     script = script.replace(/\bslot\s*\(\s*\{([^}]+)\}\s*\)/g, "this.$slots['default']({$1})");
-    
+
     return script;
 }
 
@@ -468,7 +474,7 @@ export function transformComputed(script: string): string {
  * Converts: watch(() => expr, (newVal, oldVal) => { ... })
  */
 export function transformWatch(script: string): string {
-    return script.replace(/\bwatch\s*\(\s*(\[[^\]]*\]|\([^\)]*\))\s*,\s*(\[[^\]]*\]|\([^\)]*\))\s*\)/g, 
+    return script.replace(/\bwatch\s*\(\s*(\[[^\]]*\]|\([^\)]*\))\s*,\s*(\[[^\]]*\]|\([^\)]*\))\s*\)/g,
         (match, getter, handler) => {
             return `watch(() => ${getter}, (newVal, oldVal) => ${handler})`;
         });
@@ -480,12 +486,12 @@ export function transformWatch(script: string): string {
 export function generateSlots(children: Node[], parentVar: string, idx: number, locals: string[], plugins: CompilerPlugin[]): { code: string; nextIndex: number } {
     let code = '';
     let currentIdx = idx;
-    
+
     for (const child of children) {
         if (child.type === NodeTypes.ELEMENT && child.tag === 'slot') {
             const slotName = (child.props && (child.props as any)['name']) || 'default';
             const slotVar = `slot${currentIdx}`;
-            
+
             code += `const ${slotVar} = this.$slots['${slotName}'];
 `;
             code += `if (${slotVar}) {
@@ -501,7 +507,7 @@ export function generateSlots(children: Node[], parentVar: string, idx: number, 
             currentIdx = res.nextIndex;
         }
     }
-    
+
     return { code, nextIndex: currentIdx };
 }
 
@@ -511,23 +517,23 @@ export function generateSlots(children: Node[], parentVar: string, idx: number, 
 export function generateSuspenseCode(asyncNodes: Node[], parentVar: string, idx: number, locals: string[], plugins: CompilerPlugin[]): { code: string; nextIndex: number } {
     let code = '';
     let currentIdx = idx;
-    
+
     // Wrap async content in Suspense boundary
     code += `const suspense${currentIdx} = document.createElement('suspense-boundary');
 `;
     code += `const suspenseRoot${currentIdx} = document.createDocumentFragment();
 `;
-    
+
     for (const node of asyncNodes) {
         const res = genSingleNode(node, `async${currentIdx}`, currentIdx + 1, true, `suspenseRoot${currentIdx}`, locals, false, plugins);
         code += res.code;
         currentIdx = res.nextIndex;
     }
-    
+
     code += `suspense${currentIdx}.appendChild(suspenseRoot${currentIdx});
 `;
     code += `${parentVar}.appendChild(suspense${currentIdx});
 `;
-    
+
     return { code, nextIndex: currentIdx + 1 };
 }

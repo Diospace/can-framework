@@ -15,11 +15,19 @@ export async function dev() {
     const buildDir = path.join(cwd, 'build');
 
     console.log('[Can Dev] Starting dev mode...');
-    
+
     // 1. Initial full build to ensure the dist directory is synchronized
     await build();
 
-    console.log('[Can Dev] Watching for changes in src/ and examples/...');
+    const dirsToWatch = [
+        { path: srcDir, name: 'src/' },
+        { path: examplesDir, name: 'examples/' },
+        { path: apiDir, name: 'api/' },
+        { path: buildDir, name: 'build/' }
+    ];
+
+    const existingDirs = dirsToWatch.filter(d => fs.existsSync(d.path));
+    console.log(`[Can Dev] Watching for changes in: ${existingDirs.map(d => d.name).join(', ')}`);
 
     let timeout: NodeJS.Timeout | null = null;
 
@@ -36,7 +44,7 @@ export async function dev() {
             // Calculate path relative to project root so the build function can resolve it correctly
             const relativePath = path.relative(cwd, fullPath);
             console.log(`[Can Dev] Change detected: ${relativePath}. Rebuilding...`);
-            
+
             try {
                 // Trigger the incremental build logic already present in build.ts
                 await build([relativePath]);
@@ -50,13 +58,7 @@ export async function dev() {
     const watchOptions = { recursive: true };
 
     // Setup native filesystem watchers
-    fs.watch(srcDir, watchOptions, (event, filename) => filename && handleEvent(path.join(srcDir, filename)));
-    fs.watch(examplesDir, watchOptions, (event, filename) => filename && handleEvent(path.join(examplesDir, filename)));
-    fs.watch(apiDir, watchOptions, (event, filename) => filename && handleEvent(path.join(apiDir, filename)));
-    fs.watch(buildDir, watchOptions, (event, filename) => filename && handleEvent(path.join(buildDir, filename)));
-}
-
-// Run if called directly via 'node dist/cli/dev.mjs'
-if (typeof process !== 'undefined' && process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    dev();
+    existingDirs.forEach(d => {
+        fs.watch(d.path, watchOptions, (event, filename) => filename && handleEvent(path.join(d.path, filename)));
+    });
 }

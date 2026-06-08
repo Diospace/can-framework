@@ -12,17 +12,25 @@ export * from './runtime-core/apiLifecycle';
 export * from './runtime-core/h';
 export { queueJob } from './runtime-core/scheduler';
 export * from './runtime-core/composables';
+export * from './runtime-core/componentUtils';
+export * from './runtime-core/directives/on';
+export * from './runtime-core/directives/Cref';
+export * from './runtime-core/directives/html';
+export * from './runtime-core/directives/directiveRegistry'; // Includes getDirective
+export { cModel } from './runtime-core/directives/cModelRuntime';
+export { cValidate } from './runtime-core/directives/cValidateRuntime';
+export { cPortal } from './runtime-core/directives/cPortalRuntime';
 
 // Reactivity
 export * from './reactivity/computed';
 export * from './reactivity/effect';
-export { 
-    signal, isSignal, shallowSignal, 
-    type Signal, type SignalOptions 
+export {
+    signal, isSignal, shallowSignal,
+    type Signal, type SignalOptions
 } from './reactivity/signal';
-export { 
-    reactive, readonly, shallowReactive, shallowReadonly, 
-    isReactive, isReadonly, isShallow, toRaw, markRaw, traverse 
+export {
+    reactive, readonly, shallowReactive, shallowReadonly,
+    isReactive, isReadonly, isShallow, toRaw, markRaw, traverse
 } from './reactivity/reactive';
 export { ref, isRef, unref, shallowRef, toRef, toRefs, proxyRefs } from './reactivity/ref';
 export * from './reactivity/watch';

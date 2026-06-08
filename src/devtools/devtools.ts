@@ -17,7 +17,9 @@ class CanDevTools extends EventEmitter {
     private _history: { id: number, newValue: any, oldValue: any }[] = [];
     private _signals = new Map<number, any>();
     private _components = new Set<Component>();
-    
+    _initBuffer: any[] = [];
+
+
     init() {
         if (typeof window === 'undefined' || this.enabled) return;
 
@@ -30,6 +32,13 @@ class CanDevTools extends EventEmitter {
             this.on(DevToolsEvents.SIGNAL_INIT, (data: any) => {
                 if (data.internal) return; // Filter out internal framework signals
                 this._signals.set(data.id, data.signal);
+
+                // Buffer initialization to prevent flooding postMessage
+                this._initBuffer.push({ id: data.id, name: data.name });
+                if (this._initBuffer.length > 50) {
+                    this.emit('signal:batch-init', this._initBuffer);
+                    this._initBuffer = [];
+                }
             });
             this.on(DevToolsEvents.SIGNAL_UPDATE, (data: any) => {
                 if (!this._signals.has(data.id)) return; // Only record history for tracked signals
@@ -49,7 +58,7 @@ class CanDevTools extends EventEmitter {
     emit(event: string, ...args: any[]) {
         if (!this.enabled && event !== 'init') return;
         super.emit(event, ...args);
-        
+
         // Broadcast for browser extensions via postMessage
         if (typeof window !== 'undefined') {
             window.postMessage({
