@@ -30,27 +30,71 @@ export const defaultPlugins = [
  */
 export function getOutputPath(sourcePath: string, inputRoot: string, outputRoot: string, newExt: string): string {
     const relativePath = path.relative(inputRoot, sourcePath);
-    const outRelativePath = relativePath.replace(new RegExp(`${path.extname(sourcePath)}$`), newExt);
+    const sourceExt = path.extname(sourcePath);
+    let outRelativePath = relativePath;
+    if (sourceExt) { // Only replace extension if sourcePath has one (i.e., it's a file)
+        outRelativePath = relativePath.replace(new RegExp(`${sourceExt}$`), newExt);
+    }
     return path.join(outputRoot, outRelativePath);
 }
 
 /**
  * Internal helper to find where a file will be placed in dist to calculate relative imports
  */
-function getCalculatedOutputPath(fullPath: string): string {
-    const cwd = process.cwd();
-    const distDir = path.join(cwd, 'dist');
+export function getCalculatedOutputPath(fullPath: string, normalizedCwd?: string): string {
+    const normalize = (p: string) => path.resolve(p).replace(/^[a-z]:/i, (m) => m.toUpperCase());
+    const nCwd = normalizedCwd || normalize(process.cwd());
+    const absPath = normalize(fullPath);
+    const distDir = path.join(nCwd, 'dist');
 
-    if (fullPath.startsWith(path.join(cwd, 'src'))) {
-        return getOutputPath(fullPath, path.join(cwd, 'src'), distDir, '.mjs');
-    } else if (fullPath.startsWith(path.join(cwd, 'examples'))) {
-        return getOutputPath(fullPath, path.join(cwd, 'examples'), path.join(distDir, 'examples'), '.mjs');
-    } else if (fullPath.startsWith(path.join(cwd, 'api'))) {
-        return getOutputPath(fullPath, path.join(cwd, 'api'), path.join(distDir, 'api'), '.mjs');
-    } else if (fullPath.startsWith(path.join(cwd, 'build'))) {
-        return getOutputPath(fullPath, path.join(cwd, 'build'), path.join(distDir, 'build'), '.mjs');
+    const isInside = (dirName: string): string | null => {
+        const root = path.join(nCwd, dirName);
+        const rel = path.relative(root, absPath);
+        // Fix: "" rel path means it IS the directory, which is valid for imports
+        const inside = (rel === "" || (rel && !rel.startsWith('..') && !path.isAbsolute(rel)));
+        return inside ? root : null;
+    };
+
+    const srcMatch = isInside('src');
+    if (srcMatch) return getOutputPath(absPath, srcMatch, distDir, '.mjs');
+
+    const exampleMatch = isInside('examples');
+    if (exampleMatch) return getOutputPath(absPath, exampleMatch, path.join(distDir, 'examples'), '.mjs');
+
+    const apiMatch = isInside('api');
+    if (apiMatch) return getOutputPath(absPath, apiMatch, path.join(distDir, 'api'), '.mjs');
+
+    const buildMatch = isInside('build');
+    if (buildMatch) return getOutputPath(absPath, buildMatch, path.join(distDir, 'build'), '.mjs');
+
+    return getOutputPath(absPath, path.dirname(absPath), distDir, '.mjs');
+}
+
+/**
+ * Helper to resolve an import specifier to its final .mjs path in the dist folder
+ */
+function resolveImportPath(fullPath: string, specifier: string): string {
+    const currentFileOutputPath = getCalculatedOutputPath(fullPath);
+    const currentFileOutputDir = path.dirname(currentFileOutputPath);
+
+    const importedSourcePath = path.resolve(path.dirname(fullPath), specifier);
+    let targetOutputPath = getCalculatedOutputPath(importedSourcePath); // This will be the path to the directory or file
+
+    if (fs.existsSync(importedSourcePath) && fs.statSync(importedSourcePath).isDirectory()) { // Check if the source is a directory
+        const dirName = path.basename(importedSourcePath); // e.g., 'shared'
+        const mainFile = (fs.existsSync(path.join(importedSourcePath, 'index.ts')) || fs.existsSync(path.join(importedSourcePath, 'index.can')))
+            ? 'index.mjs'
+            : `${dirName}.mjs`;
+        targetOutputPath = path.join(targetOutputPath, mainFile);
+    } else {
+        targetOutputPath = targetOutputPath.replace(/\.(js|ts|can|mjs)$/, '') + '.mjs';
     }
-    return getOutputPath(fullPath, path.dirname(fullPath), distDir, '.mjs');
+
+    let newSpecifier = path.relative(currentFileOutputDir, targetOutputPath).replace(/\\/g, '/');
+    if (!newSpecifier.startsWith('.') && !newSpecifier.startsWith('/')) {
+        newSpecifier = './' + newSpecifier;
+    }
+    return newSpecifier;
 }
 
 /**
@@ -84,18 +128,13 @@ export function fixImports(code: string, fullPath: string, providedFrameworkImpo
     // 1. Handle standard imports/exports: import {x} from './y' or export {x} from './y'
     // Added a check to prevent double .mjs extensions
     fixed = fixed.replace(/(from|import|export)\s+(['"])(\..+?)(?:\.(?:js|can|ts|mjs))?\2/g, (match, p1, p2, p3) => {
-        return `${p1} ${p2}${p3}.mjs${p2}`;
+        return `${p1} ${p2}${resolveImportPath(fullPath, p3)}${p2}`;
     });
 
     // 2. Handle dynamic imports: import('./y')
     fixed = fixed.replace(/import\((['"])(\..+?)(?:\.(?:js|can|ts|mjs))?\1\)/g, (match, p1, p2) => {
-        return `import(${p1}${p2}.mjs${p1})`;
+        return `import(${p1}${resolveImportPath(fullPath, p2)}${p1})`;
     });
-
-    // Fix relative imports from examples pointing to src (since src is flattened in dist)
-    if (fullPath.includes(path.sep + 'examples' + path.sep)) {
-        fixed = fixed.replace(/from\s+(['"])\.\.\/(?:src\/)?([^/]+)\/([^/]+)\.mjs\1/g, "from $1../$3.mjs$1");
-    }
     return fixed;
 }
 
@@ -124,16 +163,7 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
                             specifier = finalFrameworkImport; // Corrected variable name
                         }
                         if (specifier.startsWith('.')) {
-                            // Apply example path fix
-                            if (isExample) {
-                                specifier = specifier.replace(/^\.\.\/(?:src\/)?([^/]+)\/([^/]+)$/, '../$2');
-                            }
-                            // Ensure .mjs extension
-                            if (!specifier.endsWith('.mjs')) {
-                                specifier = specifier.replace(/\.(js|ts|can)$/, '') + '.mjs';
-                            }
-
-                            const newSpecifier = ts.factory.createStringLiteral(specifier);
+                            const newSpecifier = ts.factory.createStringLiteral(resolveImportPath(fullPath, specifier));
                             if (ts.isImportDeclaration(node)) {
                                 return ts.factory.updateImportDeclaration(node, node.modifiers, node.importClause, newSpecifier, node.assertClause);
                             } else {
@@ -156,15 +186,15 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
 /**
  * Determines the output path and ensures the directory exists
  */
-function saveFile(content: string, sourcePath: string, inputRoot: string, outputRoot: string, newExt: string) {
+async function saveFile(content: string, sourcePath: string, inputRoot: string, outputRoot: string, newExt: string) {
     const outPath = getOutputPath(sourcePath, inputRoot, outputRoot, newExt);
     const outDir = path.dirname(outPath);
 
     if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir, { recursive: true });
+        await fs.promises.mkdir(outDir, { recursive: true });
     }
 
-    fs.writeFileSync(outPath, content);
+    await fs.promises.writeFile(outPath, content);
 }
 
 interface BuildContext {
@@ -203,10 +233,10 @@ function renderProgressBar(current: number, total: number, message: string) {
 /**
  * Processes a single file. Useful for optimized watch cycles.
  */
-async function buildFile(fullPath: string, inputRoot: string, outputRoot: string, minify: boolean = false) {
+async function buildFile(fullPath: string, inputRoot: string, outputRoot: string, minify: boolean = false): Promise<boolean> {
     const file = path.basename(fullPath);
     const ext = path.extname(file);
-    const stat = fs.statSync(fullPath);
+    const stat = await fs.promises.stat(fullPath); // Use async stat
 
     const isSource = (ext === '.can' || (ext === '.ts' && !file.endsWith('.d.ts')));
     const outExt = isSource ? '.mjs' : ext;
@@ -215,19 +245,19 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
     const outDir = path.dirname(outPath);
 
     // Incremental check
-    if (fs.existsSync(outPath) && stat.mtimeMs <= fs.statSync(outPath).mtimeMs) {
+    if (fs.existsSync(outPath) && stat.mtimeMs <= (await fs.promises.stat(outPath)).mtimeMs) { // Use async stat
         return false;
     }
 
-    if (!fs.existsSync(outDir)) {
-        fs.mkdirSync(outDir, { recursive: true });
+    if (!fs.existsSync(outDir)) { // Keep fs.existsSync for quick check
+        await fs.promises.mkdir(outDir, { recursive: true }); // Use async mkdir
     }
 
     // Check for minification flag (CLI argument or programmatic override)
     const shouldMinify = minify || process.argv.includes('--minify');
 
     if (ext === '.can') {
-        const content = fs.readFileSync(fullPath, 'utf-8');
+        const content = await fs.promises.readFile(fullPath, 'utf-8'); // Use async readFile
 
         // Calculate finalFrameworkImport locally for .can files as it's not in this scope
         const cwd = process.cwd();
@@ -251,9 +281,9 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
             }
         }
 
-        saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');
+        await saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs'); // Use async saveFile
     } else if (ext === '.ts' && !file.endsWith('.d.ts')) {
-        const content = fs.readFileSync(fullPath, 'utf-8');
+        const content = await fs.promises.readFile(fullPath, 'utf-8'); // Use async readFile
 
         // Calculate relative path from the output directory back to the source file
         // This ensures sourcemaps work regardless of where the project is installed.
@@ -297,14 +327,14 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
             }
         }
 
-        saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs');
+        await saveFile(processedCode, fullPath, inputRoot, outputRoot, '.mjs'); // Use async saveFile
 
         if (transpiledOutput.sourceMapText) {
-            saveFile(transpiledOutput.sourceMapText, fullPath, inputRoot, outputRoot, '.mjs.map');
+            await saveFile(transpiledOutput.sourceMapText, fullPath, inputRoot, outputRoot, '.mjs.map'); // Use async saveFile
         }
     } else {
         // Static asset (HTML, CSS, JSON, Images, etc.): Copy instead of compile
-        fs.copyFileSync(fullPath, outPath);
+        await fs.promises.copyFile(fullPath, outPath); // Use async copyFile
     }
 
     return true;
@@ -316,44 +346,45 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
 async function processDirectory(dir: string, inputRoot: string, outputRoot: string, minify: boolean, context: BuildContext) {
     if (!fs.existsSync(dir)) return;
 
-    const files = await fs.promises.readdir(dir);
+    const files = await fs.promises.readdir(dir, { withFileTypes: true }); // Get dirent objects
 
     await Promise.all(files.map(async (file) => {
-        const fullPath = path.join(dir, file);
-        const stat = await fs.promises.stat(fullPath);
+        const fullPath = path.join(dir, file.name);
 
-        if (stat.isDirectory()) {
-            return processDirectory(fullPath, inputRoot, outputRoot, minify, context);
+        if (file.isDirectory()) { // Check dirent type
+            await processDirectory(fullPath, inputRoot, outputRoot, minify, context);
+            return; // Don't count directories as files
         }
 
         context.current++;
-        renderProgressBar(context.current, context.total, `Processing ${file}`);
+        renderProgressBar(context.current, context.total, `Processing ${file.name}`);
         const built = await buildFile(fullPath, inputRoot, outputRoot, minify);
         if (built) context.built++; else context.skipped++;
     }));
 }
 
 export async function build(targets?: string[], minify: boolean = false) {
-    const cwd = process.cwd();
+    const normalize = (p: string) => path.resolve(p).replace(/^[a-z]:/i, (m) => m.toUpperCase());
+    const cwd = normalize(process.cwd());
     const srcDir = path.join(cwd, 'src');
     const examplesDir = path.join(cwd, 'examples');
-    const apiDir = path.join(cwd, 'api'); // Define API directory
-    const buildDir = path.join(cwd, 'build'); // Define Build directory
+    const apiDir = path.join(cwd, 'api');
+    const buildDir = path.join(cwd, 'build');
     const distDir = path.join(cwd, 'dist');
 
     // Feature: clear-dist flag
     if (process.argv.includes('--clear') && fs.existsSync(distDir)) {
         try {
             console.log('\x1b[33m[Build]\x1b[0m Purging dist directory for a clean source mirror...');
-            fs.rmSync(distDir, { recursive: true, force: true });
+            await fs.promises.rm(distDir, { recursive: true, force: true }); // Use async rm
         } catch (err: any) {
             console.warn(`\x1b[33m[Build Warning]\x1b[0m Could not fully clear dist directory: ${err.message}`);
             // Continue anyway, as individual file writes might still succeed or overwrite.
         }
     }
 
-    if (!fs.existsSync(distDir)) {
-        fs.mkdirSync(distDir, { recursive: true });
+    if (!fs.existsSync(distDir)) { // Keep fs.existsSync for quick check
+        await fs.promises.mkdir(distDir, { recursive: true }); // Use async mkdir
     }
 
     const hasTargets = targets && targets.length > 0;
@@ -362,7 +393,7 @@ export async function build(targets?: string[], minify: boolean = false) {
         total: hasTargets
             ? targets!.reduce((sum, t) => {
                 const p = path.resolve(cwd, t);
-                return sum + (fs.existsSync(p) ? (fs.statSync(p).isDirectory() ? countFiles(p) : 1) : 0);
+                return sum + (fs.existsSync(p) ? (fs.statSync(p).isDirectory() ? countFiles(p) : 1) : 0); // Keep sync for initial count
             }, 0)
             : (countFiles(srcDir) + countFiles(examplesDir) + countFiles(apiDir) + countFiles(buildDir)),
         current: 0,
@@ -374,10 +405,10 @@ export async function build(targets?: string[], minify: boolean = false) {
 
     if (hasTargets) {
         for (const target of targets!) {
-            const fullPath = path.resolve(cwd, target);
-            if (!fs.existsSync(fullPath)) continue;
+            const fullPath = normalize(path.resolve(cwd, target));
+            if (!fs.existsSync(fullPath)) continue; // Keep sync for quick check
 
-            const isDir = fs.statSync(fullPath).isDirectory();
+            const isDir = (await fs.promises.stat(fullPath)).isDirectory(); // Use async stat
 
             let inputRoot = '';
             let outputRoot = '';
@@ -388,19 +419,19 @@ export async function build(targets?: string[], minify: boolean = false) {
             else { inputRoot = path.dirname(fullPath); outputRoot = distDir; }
 
             if (isDir) {
-                await processDirectory(fullPath, inputRoot, outputRoot, minify, context);
+                await processDirectory(fullPath, inputRoot, outputRoot, minify, context); // Await async processDirectory
             } else {
                 context.current++;
                 renderProgressBar(context.current, context.total, `Building ${path.basename(fullPath)}`);
-                const built = await buildFile(fullPath, inputRoot, outputRoot, minify);
+                const built = await buildFile(fullPath, inputRoot, outputRoot, minify); // Await async buildFile
                 if (built) context.built++; else context.skipped++;
             }
         }
     } else {
-        await processDirectory(srcDir, srcDir, distDir, minify, context);
-        await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context);
-        await processDirectory(apiDir, apiDir, path.join(distDir, 'api'), minify, context);
-        await processDirectory(buildDir, buildDir, path.join(distDir, 'build'), minify, context);
+        await processDirectory(srcDir, srcDir, distDir, minify, context); // Await async processDirectory
+        await processDirectory(examplesDir, examplesDir, path.join(distDir, 'examples'), minify, context); // Await async processDirectory
+        await processDirectory(apiDir, apiDir, path.join(distDir, 'api'), minify, context); // Await async processDirectory
+        await processDirectory(buildDir, buildDir, path.join(distDir, 'build'), minify, context); // Await async processDirectory
     }
 
     process.stdout.write('\n');
@@ -413,16 +444,20 @@ export async function build(targets?: string[], minify: boolean = false) {
     // This prevents copying 'dist/reactivity' to 'dist/reactivity' when building the framework.
     if (cwd !== frameworkRoot) {
         const frameworkDist = path.resolve(frameworkRoot, 'dist'); // Path to the framework's own compiled output
-        const runtimeFiles = ['index.mjs', 'runtime-helpers.mjs', 'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'];
+        const runtimeFiles = [
+            'index.mjs', 'runtime-helpers.mjs',
+            'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools',
+            'components'
+        ];
 
-        runtimeFiles.forEach(file => {
+        await Promise.all(runtimeFiles.map(async file => { // Use Promise.all for async copy
             const src = path.join(frameworkDist, file);
             const dest = path.join(distDir, file === 'index.mjs' ? 'can-framework.mjs' : file);
             if (fs.existsSync(src)) {
-                if (fs.statSync(src).isDirectory()) fs.cpSync(src, dest, { recursive: true });
-                else fs.copyFileSync(src, dest);
+                if ((await fs.promises.stat(src)).isDirectory()) await fs.promises.cp(src, dest, { recursive: true });
+                else await fs.promises.copyFile(src, dest);
             }
-        });
+        }));
     }
 
     // Handle public/index.html injection for the current project (framework or user app).
@@ -430,40 +465,40 @@ export async function build(targets?: string[], minify: boolean = false) {
     const publicDir = path.join(cwd, 'public');
     const indexHtml = path.join(publicDir, 'index.html');
     if (fs.existsSync(indexHtml)) {
-        let htmlContent = fs.readFileSync(indexHtml, 'utf-8');
+        let htmlContent = await fs.promises.readFile(indexHtml, 'utf-8'); // Use async readFile
         // Automatically inject the entry point script if not present
         if (!htmlContent.includes('main.mjs')) {
             htmlContent = htmlContent.replace('</body>', '<script type="module" src="/main.mjs"></script></body>');
         }
-        fs.writeFileSync(path.join(distDir, 'index.html'), htmlContent);
+        await fs.promises.writeFile(path.join(distDir, 'index.html'), htmlContent); // Use async writeFile
     }
 
     // Copy other files from public/ (images, icons, etc.)
     if (fs.existsSync(publicDir)) {
-        fs.readdirSync(publicDir).forEach(file => {
+        await Promise.all(fs.readdirSync(publicDir).map(async file => { // Use Promise.all for async copy
             if (file === 'index.html') return;
             const src = path.join(publicDir, file);
             const dest = path.join(distDir, file);
-            if (fs.statSync(src).isDirectory()) {
-                fs.cpSync(src, dest, { recursive: true });
+            if (fs.statSync(src).isDirectory()) { // Keep sync for quick check
+                await fs.promises.cp(src, dest, { recursive: true }); // Use async cp
             } else {
-                fs.copyFileSync(src, dest);
+                await fs.promises.copyFile(src, dest); // Use async copyFile
             }
-        });
+        }));
     }
 
     // Copy examples/index.html to dist/examples/index.html
     const exampleIndexHtml = path.join(examplesDir, 'index.html');
     if (fs.existsSync(exampleIndexHtml)) {
-        let htmlContent = fs.readFileSync(exampleIndexHtml, 'utf-8');
+        let htmlContent = await fs.promises.readFile(exampleIndexHtml, 'utf-8'); // Use async readFile
         const exampleOutDir = path.join(distDir, 'examples');
-        if (!fs.existsSync(exampleOutDir)) fs.mkdirSync(exampleOutDir, { recursive: true });
+        if (!fs.existsSync(exampleOutDir)) await fs.promises.mkdir(exampleOutDir, { recursive: true }); // Use async mkdir
 
         // Ensure the example entry point (main.mjs or index.mjs) is injected
         if (!htmlContent.includes('.mjs')) {
             htmlContent = htmlContent.replace('</body>', '<script type="module" src="./main.mjs"></script></body>');
         }
-        fs.writeFileSync(path.join(exampleOutDir, 'index.html'), htmlContent);
+        await fs.promises.writeFile(path.join(exampleOutDir, 'index.html'), htmlContent); // Use async writeFile
     }
 
     // Generate API barrel file after all API routes are built
@@ -482,7 +517,7 @@ const isMain = () => {
 };
 
 if (isMain()) {
-    build();
+    build(); // Call async build
 }
 
 // Helper to convert kebab-case to camelCase
@@ -504,7 +539,7 @@ async function generateApiBarrelFile(apiOutputRoot: string) {
 
     for (const file of files) {
         // Exclude index.mjs (main server entry), routes.mjs (the barrel itself), and any files within 'route/' subdirectories
-        if (file.endsWith('.mjs') && file !== 'index.mjs' && file !== 'routes.mjs' && !file.startsWith('route/')) {
+        if (file.endsWith('.mjs') && file !== 'index.mjs' && file !== 'routes.mjs' && !file.startsWith('route/')) { // Keep sync readdir for now
             const baseName = path.basename(file, '.mjs');
             const camelCaseName = kebabToCamelCase(baseName);
             exportStatements.push(`export { default as ${camelCaseName} } from './${file}';`);
@@ -513,7 +548,7 @@ async function generateApiBarrelFile(apiOutputRoot: string) {
 
     if (exportStatements.length > 0) {
         const barrelFilePath = path.join(apiOutputRoot, 'routes.mjs');
-        fs.writeFileSync(barrelFilePath, exportStatements.join('\n') + '\n');
+        await fs.promises.writeFile(barrelFilePath, exportStatements.join('\n') + '\n'); // Use async writeFile
         console.log(`\x1b[32mGenerated API barrel file:\x1b[0m ${path.relative(process.cwd(), barrelFilePath)}`);
     }
 }

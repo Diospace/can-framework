@@ -1,7 +1,7 @@
 import * as http from 'http';
 import * as fs from 'fs';
 import * as path from 'path';
-import { build } from './build';
+import { build, getCalculatedOutputPath } from './build';
 
 export async function serve(port: number = 3000, isProd: boolean = false) {
     const distDir = path.join(process.cwd(), 'dist');
@@ -141,20 +141,25 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
     dirsToWatch.forEach(watchDir => {
         if (fs.existsSync(watchDir)) {
             fs.watch(watchDir, { recursive: true }, (event, filename) => {
+                const normalize = (p: string) => path.resolve(p).replace(/^[a-z]:/i, (m) => m.toUpperCase());
+                const nCwd = normalize(process.cwd());
+                const nDistDir = path.join(nCwd, 'dist');
+
                 if (!timeout) {
                     timeout = setTimeout(async () => {
                         const fullPath = path.join(watchDir, filename || '');
-                        const relativePath = path.relative(cwd, fullPath);
+                        const relativePath = path.relative(nCwd, fullPath);
                         console.log(`\n[Watch] Change: ${relativePath}`);
                         try {
                             await build([relativePath]);
 
                             // Map source path to served URL
-                            let url = '/' + path.relative(cwd, fullPath).replace(/\\/g, '/');
-                            // Adjust for src flattening in dist
-                            if (url.startsWith('/src/')) url = url.replace('/src/', '/');
-                            if (url.endsWith('.can')) url = url.replace('.can', '.mjs');
-                            if (url.endsWith('.ts')) url = url.replace('.ts', '.mjs');
+                            // Use the same logic as build.ts to determine the final output path
+                            const changedFileOutputPath = getCalculatedOutputPath(fullPath, nCwd);
+                            let url = '/' + path.relative(nDistDir, changedFileOutputPath).replace(/\\/g, '/');
+                            if (!url.startsWith('/')) { // Ensure leading slash for root files
+                                url = '/' + url;
+                            }
 
                             // Check if the change is in a .can file (which contains styles)
                             const isStyleCandidate = filename?.endsWith('.can');
@@ -166,7 +171,7 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
                         } catch (e) {
                             console.error('[Watch] Build failed:', e);
                         }
-                        timeout = null!;
+                        timeout = null as any;
                     }, 100); // Debounce
                 }
             });
