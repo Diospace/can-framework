@@ -45,7 +45,7 @@ component App {
                 <div class="hero-bg"></div>
                 <div class="hero-inner">
                     <div class="hero-badge">
-                        <span class="dot"></span> v1.1.8 · Signal-based reactivity
+                        <span class="dot"></span> v1.1.9 · Signal-based reactivity
                     </div>
                     <h1 class="hero-title">Build the web,<br /><span class="gradient-text">the Can way.</span></h1>
                     <p class="hero-sub">
@@ -59,7 +59,7 @@ component App {
                     </div>
                     <div class="hero-stats">
                         <div class="stat"><b>182</b><span>Source files</span></div>
-                        <div class="stat"><b>1.1.8</b><span>Version</span></div>
+                        <div class="stat"><b>1.1.9</b><span>Version</span></div>
                         <div class="stat"><b>Zero</b><span>Runtime deps</span></div>
                     </div>
                 </div>
