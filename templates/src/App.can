@@ -1,17 +1,485 @@
+import { signal } from '@decaspace/can-framework';
 import { HelloWorld } from './components/HelloWorld.can';
 
 component App {
-    var message = "Welcome to Can Framework";
+    var navOpen = signal(false);
+    var year = signal(new Date().getFullYear());
+
+    var sampleCode = [
+        "component HelloWorld {",
+        "    var name = signal('World');",
+        "    var template " + "= '<h1>Hello, {{name}}!</h1>';",
+        "}"
+    ].join("\n");
+
+    function toggleNav() {
+        this.navOpen.value = !this.navOpen.value;
+    }
+
+    function closeNav() {
+        this.navOpen.value = false;
+    }
+
     var template = `
-        <div class="container">
-            <img src="/logo.svg" alt="Can Logo" class="logo" />
-            <HelloWorld msg="{{message}}" />
+        <div class="page">
+            <nav class="nav">
+                <div class="nav-inner">
+                    <a class="brand" href="#top">
+                        <img src="/can.png" alt="Can Framework logo" class="brand-logo" />
+                        <span class="brand-name">Can<span class="brand-accent">JS</span></span>
+                    </a>
+                    <button class="hamburger {{ navOpen.value ? 'open' : '' }}" @click="toggleNav" aria-label="Toggle navigation">
+                        <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+                    </button>
+                    <div class="nav-links {{ navOpen.value ? 'open' : '' }}">
+                        <a href="#features" @click="closeNav">Features</a>
+                        <a href="#demo" @click="closeNav">Live Demo</a>
+                        <a href="#get-started" @click="closeNav">Get Started</a>
+                        <a href="#why" @click="closeNav">Why Can?</a>
+                        <a class="btn btn-small" href="#get-started" @click="closeNav">Start Building</a>
+                    </div>
+                </div>
+            </nav>
+
+            <header id="top" class="hero">
+                <div class="hero-bg"></div>
+                <div class="hero-inner">
+                    <div class="hero-badge">
+                        <span class="dot"></span> v1.1.8 · Signal-based reactivity
+                    </div>
+                    <h1 class="hero-title">Build the web,<br /><span class="gradient-text">the Can way.</span></h1>
+                    <p class="hero-sub">
+                        Can is a modern, high-performance web framework with <b>Signal-based reactivity</b>,
+                        <b>Single File Components</b> (SFCs), a built-in router, store and animations —
+                        all in a tiny, dependency-free core.
+                    </p>
+                    <div class="hero-actions">
+                        <a class="btn btn-primary" href="#get-started">Get Started</a>
+                        <a class="btn btn-ghost" href="#features">Explore Features</a>
+                    </div>
+                    <div class="hero-stats">
+                        <div class="stat"><b>182</b><span>Source files</span></div>
+                        <div class="stat"><b>1.1.8</b><span>Version</span></div>
+                        <div class="stat"><b>Zero</b><span>Runtime deps</span></div>
+                    </div>
+                </div>
+            </header>
+
+            <section id="features" class="section">
+                <div class="section-head">
+                    <span class="eyebrow">What's inside</span>
+                    <h2>Everything you need to build modern apps</h2>
+                    <p>One framework, batteries included — no glue code required.</p>
+                </div>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <h3>Signal Reactivity</h3>
+                        <p>Fine-grained updates with <code>signal()</code> — only the parts of the DOM that change are re-rendered.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧩</div>
+                        <h3>Single File Components</h3>
+                        <p>Template, logic and scoped styles together in one <code>.can</code> file. Compile once, ship fast.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🧭</div>
+                        <h3>Built-in Router</h3>
+                        <p>Declarative routes, lazy loading and navigation guards without extra packages.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🗄️</div>
+                        <h3>State Store</h3>
+                        <p>A predictable store with actions, mutations, getters and built-in persistence.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🎬</div>
+                        <h3>Animations</h3>
+                        <p>Native animation helpers for transitions, lists and micro-interactions.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🛠️</div>
+                        <h3>Dev Tools Ready</h3>
+                        <p>Time-travel debugging, snapshots and a live DevTools bridge out of the box.</p>
+                    </div>
+                </div>
+            </section>
+
+            <HelloWorld msg="Can is reactive" />
+
+            <section id="get-started" class="section get-started">
+                <div class="section-head">
+                    <span class="eyebrow">Get started</span>
+                    <h2>Up and running in seconds</h2>
+                </div>
+                <div class="steps">
+                    <div class="step">
+                        <span class="step-num">1</span>
+                        <div>
+                            <h3>Create a project</h3>
+                            <pre><code>npx can-framework create my-app</code></pre>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">2</span>
+                        <div>
+                            <h3>Run the dev server</h3>
+                            <pre><code>cd my-app && npm run dev</code></pre>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <span class="step-num">3</span>
+                        <div>
+                            <h3>Open your app</h3>
+                            <pre><code>→ http://localhost:3000</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="code-block">
+                    <div class="code-title"><span class="dot"></span> your-first-component.can</div>
+                    <pre><code><span c-text="sampleCode"></span></code></pre>
+                </div>
+            </section>
+
+            <section id="why" class="section why">
+                <div class="section-head">
+                    <span class="eyebrow">Why Can?</span>
+                    <h2>Small. Fast. Yours.</h2>
+                </div>
+                <div class="why-grid">
+                    <div class="why-item">
+                        <h3>⚡ Tiny bundle</h3>
+                        <p>A lean core that stays out of your way — more of your payload is your app.</p>
+                    </div>
+                    <div class="why-item">
+                        <h3>🚀 Fast by default</h3>
+                        <p>Compiled templates and signal tracking mean updates are precise and cheap.</p>
+                    </div>
+                    <div class="why-item">
+                        <h3>🧘 Simple mental model</h3>
+                        <p>Plain JavaScript + HTML in one file. No magic configs, no complex toolchains.</p>
+                    </div>
+                    <div class="why-item">
+                        <h3>🔌 Zero runtime deps</h3>
+                        <p>Framework first, dependencies later — install only what your app truly needs.</p>
+                    </div>
+                </div>
+            </section>
+
+            <footer class="footer">
+                <div class="footer-inner">
+                    <img src="/can.png" alt="Can Framework" class="footer-logo" />
+                    <p class="footer-tag">Made with ❤️ by the Can framework team</p>
+                    <p class="footer-copy">© {{year.value}} Can Framework · MIT License</p>
+                </div>
+            </footer>
         </div>
     `;
 }
 
 <style scoped>
-.container { display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: 10vh; }
-.logo { width: 120px; height: 120px; transition: transform 0.3s ease; }
-.logo:hover { transform: rotate(10deg) scale(1.1); }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.page {
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: #0b0f1a;
+    color: #e6e9f0;
+    overflow-x: hidden;
+}
+
+button { font-family: inherit; }
+#demo { scroll-margin-top: 80px; }
+section { scroll-margin-top: 80px; }
+#features, #get-started, #why, #demo { scroll-margin-top: 90px; }
+
+/* ---------- Nav ---------- */
+.nav {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    background: rgba(11, 15, 26, 0.72);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.nav-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0.9rem 1.2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+.brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; color: #fff; }
+.brand-logo { width: 34px; height: 34px; }
+.brand-name { font-size: 1.3rem; font-weight: 800; letter-spacing: -0.5px; }
+.brand-accent { color: #42b883; }
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 1.6rem;
+}
+.nav-links a { color: #b9c1d2; text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
+.nav-links a:hover { color: #42b883; }
+.hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 0;
+    font-weight: inherit;
+}
+nav .hamburger {
+    display: none;
+    padding: 6px;
+    border-radius: 0;
+    font-size: inherit;
+}
+@media (min-width: 861px) {
+    nav .hamburger { display: none; }
+}
+.bar {
+    width: 24px;
+    height: 2px;
+    background: #e6e9f0;
+    border-radius: 2px;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* ---------- Hero ---------- */
+.hero { position: relative; padding: 6.5rem 1.2rem 5rem; text-align: center; }
+.hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(600px 380px at 20% 10%, rgba(66,184,131,0.16), transparent 60%),
+        radial-gradient(700px 420px at 85% 20%, rgba(91,120,255,0.13), transparent 60%);
+    pointer-events: none;
+}
+.hero-inner { position: relative; max-width: 820px; margin: 0 auto; }
+.hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(66,184,131,0.4);
+    background: rgba(66,184,131,0.1);
+    border-radius: 999px;
+    color: #8ee6bd;
+    font-size: 0.85rem;
+    margin-bottom: 1.6rem;
+}
+.dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #42b883;
+    box-shadow: 0 0 12px #42b883;
+    animation: pulse 2s infinite;
+}
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+}
+.hero-title { font-size: clamp(2.6rem, 6vw, 4.6rem); font-weight: 900; line-height: 1.08; letter-spacing: -1.5px; }
+.gradient-text {
+    background: linear-gradient(90deg, #42b883, #5b78ff, #42b883);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 6s linear infinite;
+}
+@keyframes shimmer { to { background-position: 200% center; } }
+.hero-sub { margin: 1.4rem auto 0; max-width: 640px; color: #a7b0c2; font-size: 1.12rem; line-height: 1.7; }
+.hero-sub b { color: #d7dce6; font-weight: 600; }
+.hero-actions { margin-top: 2.2rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; }
+.btn {
+    display: inline-block;
+    text-decoration: none;
+    padding: 0.85rem 1.8rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 0.98rem;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+.btn-primary {
+    background: linear-gradient(135deg, #42b883, #2f9e6f);
+    color: #07120c;
+    box-shadow: 0 10px 30px rgba(66,184,131,0.35);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(66,184,131,0.45); }
+.btn-ghost {
+    color: #e6e9f0;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.04);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.09); transform: translateY(-2px); }
+.btn-small { padding: 0.5rem 1.1rem; font-size: 0.9rem; border-radius: 10px; }
+.hero-stats {
+    margin-top: 3rem;
+    display: flex;
+    justify-content: center;
+    gap: 3.2rem;
+    flex-wrap: wrap;
+}
+.stat { display: flex; flex-direction: column; gap: 0.2rem; }
+.stat b { font-size: 1.7rem; color: #fff; font-weight: 800; }
+.stat span { font-size: 0.85rem; color: #8b94a8; }
+
+/* ---------- Sections ---------- */
+.section { padding: 4.5rem 1.2rem; max-width: 1080px; margin: 0 auto; }
+.section-head { text-align: center; margin-bottom: 2.6rem; }
+.eyebrow {
+    display: inline-block;
+    color: #42b883;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+}
+.section-head h2 { font-size: clamp(1.8rem, 3.5vw, 2.5rem); font-weight: 800; letter-spacing: -0.8px; }
+.section-head p { color: #8b94a8; margin-top: 0.5rem; }
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.2rem;
+}
+.feature-card {
+    background: linear-gradient(165deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    padding: 1.6rem 1.5rem;
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.feature-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(66,184,131,0.45);
+    box-shadow: 0 18px 44px rgba(0,0,0,0.35);
+}
+.feature-icon { font-size: 1.7rem; margin-bottom: 0.7rem; }
+.feature-card h3 { font-size: 1.12rem; margin-bottom: 0.45rem; }
+.feature-card p { color: #9aa3b6; font-size: 0.94rem; line-height: 1.65; }
+.feature-card code, .hint code {
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    font-size: 0.85em;
+    background: rgba(0,0,0,0.35);
+    color: #8ee6bd;
+    padding: 0.12rem 0.4rem;
+    border-radius: 6px;
+}
+
+/* ---------- Get started ---------- */
+.get-started { text-align: left; }
+.steps { display: flex; flex-direction: column; gap: 1rem; margin-bottom: 2.2rem; }
+.step {
+    display: flex;
+    align-items: center;
+    gap: 1.2rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem;
+}
+.step-num {
+    flex-shrink: 0;
+    width: 42px; height: 42px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: rgba(66,184,131,0.15);
+    border: 1px solid rgba(66,184,131,0.45);
+    color: #42b883;
+    font-weight: 800;
+}
+.step h3 { font-size: 1rem; margin-bottom: 0.3rem; }
+.step pre, .code-block pre {
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    background: rgba(0,0,0,0.35);
+    padding: 0.55rem 0.9rem;
+    border-radius: 8px;
+    display: inline-block;
+    color: #8ee6bd;
+    font-size: 0.9rem;
+}
+.code-block {
+    background: #0d1322;
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 14px;
+    overflow: hidden;
+}
+.code-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.1rem;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    font-size: 0.85rem;
+    color: #a7b0c2;
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+.code-block pre { display: block; padding: 1.2rem 1.3rem; background: none; }
+
+/* ---------- Why ---------- */
+.why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.2rem;
+}
+.why-item {
+    background: rgba(255,255,255,0.035);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 1.5rem;
+}
+.why-item h3 { font-size: 1.05rem; margin-bottom: 0.45rem; }
+.why-item p { color: #9aa3b6; font-size: 0.94rem; line-height: 1.6; }
+
+/* ---------- Footer ---------- */
+.footer {
+    border-top: 1px solid rgba(255,255,255,0.07);
+    padding: 2.6rem 1.2rem;
+    text-align: center;
+}
+.footer-logo { width: 40px; height: 40px; margin-bottom: 0.7rem; }
+.footer-tag { color: #b9c1d2; font-size: 0.95rem; margin-bottom: 0.35rem; }
+.footer-copy { color: #6d7689; font-size: 0.85rem; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 860px) {
+    nav .hamburger { display: flex; }
+    .nav-links {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.2rem;
+        background: rgba(11, 15, 26, 0.98);
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding: 0 1.2rem;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .nav-links.open { max-height: 360px; padding: 0.8rem 1.2rem 1.2rem; }
+    .nav-links a { padding: 0.65rem 0; width: 100%; font-size: 1rem; }
+    .hamburger.open .bar:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .hamburger.open .bar:nth-child(2) { opacity: 0; }
+    .hamburger.open .bar:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .hero { padding-top: 4.5rem; }
+    .hero-stats { gap: 2rem; }
+}
+
+@media (max-width: 520px) {
+    .hero-actions { flex-direction: column; align-items: stretch; }
+    .btn { text-align: center; }
+    .step { flex-direction: column; text-align: center; }
+}
 </style>

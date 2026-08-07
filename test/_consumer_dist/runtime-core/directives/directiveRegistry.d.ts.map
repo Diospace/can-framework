@@ -1,0 +1,1 @@
+{"version":3,"file":"directiveRegistry.d.ts","sourceRoot":"","sources":["../../../src/runtime-core/directives/directiveRegistry.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,iBAAiB,CAAC;AAI5C,wBAAgB,iBAAiB,CAAC,IAAI,EAAE,MAAM,EAAE,SAAS,EAAE,SAAS,QAEnE;AAED,wBAAgB,YAAY,CAAC,IAAI,EAAE,MAAM,GAAG,SAAS,GAAG,SAAS,CAEhE"}

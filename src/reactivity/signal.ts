@@ -1,6 +1,5 @@
 import { trackEffects, ReactiveEffect } from './effect';
 import { hasChanged } from '../shared/index';
-import { queueJob } from '../runtime-core/scheduler';
 import { createDep, Dep } from './dep';
 import { devtools, DevToolsEvents } from '../devtools/devtools';
 
@@ -50,7 +49,7 @@ export function trigger(dep: Dep) {
         if (effect.scheduler) {
             effect.scheduler();
         } else {
-            queueJob(effect);
+            effect();
         }
     }
 }

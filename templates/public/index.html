@@ -3,11 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Can Framework App</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="description" content="Can Framework — a modern, high-performance web framework using Signal-based reactivity and Single File Components.">
+    <title>Can Framework — Welcome</title>
+    <link rel="icon" type="image/png" href="/can.png">
     <style>
-        body { font-family: 'Inter', sans-serif; margin: 0; background: #fafafa; }
+        :root {
+            color-scheme: dark;
+            --can-primary: #42b883;
+            --can-primary-soft: rgba(66, 184, 131, 0.14);
+            --can-bg: #0b0f1a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--can-bg);
+            color: #e6e9f0;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+        }
         #app { min-height: 100vh; }
+        ::selection { background: rgba(66, 184, 131, 0.35); color: #fff; }
+        a { color: inherit; }
     </style>
 </head>
 <body>

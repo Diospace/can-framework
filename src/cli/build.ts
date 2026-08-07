@@ -165,9 +165,9 @@ function getTsTransformers(fullPath: string): ts.CustomTransformers {
                         if (specifier.startsWith('.')) {
                             const newSpecifier = ts.factory.createStringLiteral(resolveImportPath(fullPath, specifier));
                             if (ts.isImportDeclaration(node)) {
-                                return ts.factory.updateImportDeclaration(node, node.modifiers, node.importClause, newSpecifier, node.assertClause);
+                                return ts.factory.updateImportDeclaration(node, node.modifiers, node.importClause, newSpecifier, node.attributes);
                             } else {
-                                return ts.factory.updateExportDeclaration(node, node.modifiers, node.isTypeOnly, node.exportClause, newSpecifier, node.assertClause);
+                                return ts.factory.updateExportDeclaration(node, node.modifiers, node.isTypeOnly, node.exportClause, newSpecifier, node.attributes);
                             }
                         }
                     }
@@ -316,6 +316,10 @@ async function buildFile(fullPath: string, inputRoot: string, outputRoot: string
         // the shebang if it exists without shifting line numbers.
         let processedCode = transpiledOutput.outputText.replace(/^#!.*/, '');
 
+        // TypeScript always names source maps *.js.map regardless of the output
+        // extension. Align the comment with the *.mjs.map files we actually save.
+        processedCode = processedCode.replace(/(\/\/# sourceMappingURL=)(.+?)\.js\.map/g, (m, prefix, name) => `${prefix}${name}.mjs.map`);
+
         // Minification logic using esbuild
         if (shouldMinify) {
             try {
@@ -446,18 +450,23 @@ export async function build(targets?: string[], minify: boolean = false) {
         const frameworkDist = path.resolve(frameworkRoot, 'dist'); // Path to the framework's own compiled output
         const runtimeFiles = [
             'index.mjs', 'runtime-helpers.mjs',
-            'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools',
-            'components'
+            'reactivity', 'runtime-core', 'runtime-dom', 'shared', 'store', 'router', 'devtools'
         ];
 
-        await Promise.all(runtimeFiles.map(async file => { // Use Promise.all for async copy
+        // Copy sequentially (not Promise.all): parallel fs.cp calls race on the parent
+        // directory's mkdir and throw EEXIST. Also purge any stale destination first so a
+        // partial/aborted build cannot block the copy. 'components' is deliberately excluded:
+        // it holds the framework's demo components and would clobber the project's own
+        // src/components*. (the runtime chain never imports it).
+        for (const file of runtimeFiles) { // Use for...of for ordered async copy
             const src = path.join(frameworkDist, file);
             const dest = path.join(distDir, file === 'index.mjs' ? 'can-framework.mjs' : file);
             if (fs.existsSync(src)) {
-                if ((await fs.promises.stat(src)).isDirectory()) await fs.promises.cp(src, dest, { recursive: true });
+                if (fs.existsSync(dest)) await fs.promises.rm(dest, { recursive: true, force: true });
+                if ((await fs.promises.stat(src)).isDirectory()) await fs.promises.cp(src, dest, { recursive: true, force: true });
                 else await fs.promises.copyFile(src, dest);
             }
-        }));
+        }
     }
 
     // Handle public/index.html injection for the current project (framework or user app).
@@ -505,20 +514,10 @@ export async function build(targets?: string[], minify: boolean = false) {
     await generateApiBarrelFile(path.join(distDir, 'api'));
 }
 
-// Run if called directly
-const isMain = () => {
-    if (typeof process === 'undefined' || !process.argv[1]) return false;
-    try {
-        const entryPath = path.resolve(process.argv[1]);
-        return entryPath === fileURLToPath(import.meta.url);
-    } catch {
-        return false;
-    }
-};
-
-if (isMain()) {
-    build(); // Call async build
-}
+// NOTE: Avoid adding a direct `build()` auto-invocation here. The CLI bundle bundles all
+// modules into a single file, so an `import.meta.url === process.argv[1]` guard evaluates
+// true for every module and would fire `build()` again on top of the dispatcher call in
+// index.ts, racing two builds.
 
 // Helper to convert kebab-case to camelCase
 function kebabToCamelCase(kebab: string): string {

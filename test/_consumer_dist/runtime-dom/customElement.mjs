@@ -1,0 +1,292 @@
+import { effect, reactive, EffectScope, proxyRefs, watch } from "../reactivity/index.mjs";
+import { parseAttributeValue } from "./attributeUtils.mjs";
+import { queueJob, queuePostFlushJob, isFlushing } from "../runtime-core/scheduler.mjs";
+import { devtools, DevToolsEvents } from "../devtools/index.mjs";
+import { LifecycleHooks } from "../runtime-core/apiLifecycle.mjs";
+import { warn } from "../shared/index.mjs";
+//import { HTMLElement } from '../server-renderer/polyfill';
+// Fallback to a dummy class if HTMLElement isn't defined yet (prevents crash during module load)
+const GlobalHTMLElement = typeof globalThis.HTMLElement !== 'undefined' ? globalThis.HTMLElement : class {
+};
+const kebabToCamel = (s) => s.replace(/-./g, x => x[1].toUpperCase());
+const camelToKebab = (s) => s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
+/**
+ * Maps native tag names to their corresponding constructor classes.
+ */
+export const nativeElementMap = {
+    'a': typeof HTMLAnchorElement !== 'undefined' ? HTMLAnchorElement : GlobalHTMLElement,
+    'audio': typeof HTMLAudioElement !== 'undefined' ? HTMLAudioElement : GlobalHTMLElement,
+    'button': typeof HTMLButtonElement !== 'undefined' ? HTMLButtonElement : GlobalHTMLElement,
+    'canvas': typeof HTMLCanvasElement !== 'undefined' ? HTMLCanvasElement : GlobalHTMLElement,
+    'div': typeof HTMLDivElement !== 'undefined' ? HTMLDivElement : GlobalHTMLElement,
+    'form': typeof HTMLFormElement !== 'undefined' ? HTMLFormElement : GlobalHTMLElement,
+    'img': typeof HTMLImageElement !== 'undefined' ? HTMLImageElement : GlobalHTMLElement,
+    'input': typeof HTMLInputElement !== 'undefined' ? HTMLInputElement : GlobalHTMLElement,
+    'label': typeof HTMLLabelElement !== 'undefined' ? HTMLLabelElement : GlobalHTMLElement,
+    'li': typeof HTMLLIElement !== 'undefined' ? HTMLLIElement : GlobalHTMLElement,
+    'ol': typeof HTMLOListElement !== 'undefined' ? HTMLOListElement : GlobalHTMLElement,
+    'p': typeof HTMLParagraphElement !== 'undefined' ? HTMLParagraphElement : GlobalHTMLElement,
+    'select': typeof HTMLSelectElement !== 'undefined' ? HTMLSelectElement : GlobalHTMLElement,
+    'span': typeof HTMLSpanElement !== 'undefined' ? HTMLSpanElement : GlobalHTMLElement,
+    'table': typeof HTMLTableElement !== 'undefined' ? HTMLTableElement : GlobalHTMLElement,
+    'textarea': typeof HTMLTextAreaElement !== 'undefined' ? HTMLTextAreaElement : GlobalHTMLElement,
+    'ul': typeof HTMLUListElement !== 'undefined' ? HTMLUListElement : GlobalHTMLElement,
+    'video': typeof HTMLVideoElement !== 'undefined' ? HTMLVideoElement : GlobalHTMLElement,
+};
+export class CanElement extends GlobalHTMLElement {
+    constructor() {
+        super();
+        this.props = reactive({});
+        this._scope = new EffectScope();
+        // Internal flag to track if the component has been mounted
+        this._isMounted = false;
+        // Stores the reactive effect responsible for rendering updates
+        this._renderEffect = null;
+        // Assign a unique instance ID for the DevTools bridge
+        this._can_id = Math.random().toString(36).slice(2, 11);
+        // This enables Shadow DOM for the component.
+        // Only attach shadow if the element supports it and we aren't extending a 
+        // native element that prohibits it (like <input> or <img>).
+        const isNativeExtension = this.constructor.extends;
+        const noShadowTags = ['input', 'img', 'br', 'hr', 'textarea'];
+        if (!isNativeExtension || !noShadowTags.includes(isNativeExtension)) {
+            this.attachShadow({ mode: 'open' });
+        }
+        // Attribute-to-Property Sync:
+        // Define proxies for observed attributes so that 'element.prop' 
+        // stays in sync with the reactive 'this.props' object.
+        const observed = this.constructor.observedAttributes || [];
+        observed.forEach((attrName) => {
+            const propName = kebabToCamel(attrName);
+            Object.defineProperty(this, propName, {
+                get: () => this.props[propName],
+                set: (val) => {
+                    this.props[propName] = val;
+                    // Reflect property change back to HTML attribute
+                    if (val === null || val === undefined || val === false) {
+                        this.removeAttribute(attrName);
+                    }
+                    else {
+                        const attrVal = val === true ? '' : (typeof val === 'object' ? JSON.stringify(val) : String(val));
+                        this.setAttribute(attrName, attrVal);
+                    }
+                },
+                configurable: true,
+                enumerable: true
+            });
+        });
+    }
+    static get observedAttributes() {
+        // Automatically derive observed attributes from prop definitions if the compiler 
+        // or the user has provided them on the constructor.
+        const definitions = this.propDefinitions;
+        return definitions ? Object.keys(definitions).map(camelToKebab) : [];
+    }
+    attributeChangedCallback(name, oldValue, newValue) {
+        if (oldValue !== newValue) {
+            const parsedValue = parseAttributeValue(newValue);
+            const propName = kebabToCamel(name);
+            // Optimization: Skip validation if we are in a batch update (flushing)
+            // This avoids redundant checks when the framework is setting attributes programmatically
+            if (!isFlushing()) {
+                const definitions = this.constructor.propDefinitions || {};
+                if (definitions[propName]) {
+                    this._validateProp(propName, parsedValue, definitions[propName]);
+                }
+            }
+            // Only trigger reactive updates if the parsed value actually changed
+            if (this.props[propName] !== parsedValue) {
+                this.props[propName] = parsedValue;
+            }
+        }
+    }
+    _validateProp(name, value, schema) {
+        if (schema.required && (value === null || value === undefined)) {
+            warn(`[Prop Validation] Missing required prop: "${name}" on <${this.tagName.toLowerCase()}>`);
+        }
+        if (schema.type && value !== null && value !== undefined) {
+            const expected = schema.type.toLowerCase();
+            const actual = typeof value;
+            let isValid = true;
+            if (expected === 'array')
+                isValid = Array.isArray(value);
+            else if (expected === 'object')
+                isValid = actual === 'object' && !Array.isArray(value);
+            else if (expected === 'number')
+                isValid = actual === 'number';
+            else if (expected === 'boolean')
+                isValid = actual === 'boolean';
+            else if (expected === 'string')
+                isValid = actual === 'string';
+            if (!isValid) {
+                warn(`[Prop Validation] Type mismatch for prop "${name}". Expected ${schema.type}, got ${actual}.`);
+            }
+        }
+        // 2. Custom Validator Support
+        if (schema.validator) {
+            // If the validator is still a string (emitted by the compiler), convert it to a function once.
+            if (typeof schema.validator === 'string') {
+                try {
+                    // We wrap the code in parentheses to handle arrow functions and expressions correctly.
+                    schema.validator = new Function('value', `return (${schema.validator})(value)`);
+                }
+                catch (e) {
+                    warn(`[Prop Validation] Invalid validator logic for "${name}":`, e);
+                    delete schema.validator; // Disable failing validator
+                }
+            }
+            if (typeof schema.validator === 'function') {
+                const result = schema.validator.call(this, value);
+                if (result === false) {
+                    warn(`[Prop Validation] Custom validation failed for prop "${name}" on <${this.tagName.toLowerCase()}>.`);
+                }
+                else if (typeof result === 'string' && result) {
+                    // Allow the validator to return a specific error message string
+                    warn(`[Prop Validation] Prop "${name}": ${result}`);
+                }
+            }
+        }
+    }
+    connectedCallback() {
+        console.log('Element connected to the DOM');
+        if (!this._isMounted) {
+            this._isMounted = true;
+            // Initial Sync: Ensure attributes already present on the element
+            // are reflected in the reactive props object.
+            const definitions = this.constructor.propDefinitions || {};
+            const defaults = this.constructor.defaultProps || {};
+            const observed = this.constructor.observedAttributes || [];
+            for (const attrName of observed) {
+                const propName = kebabToCamel(attrName);
+                const hasAttr = this.hasAttribute(attrName);
+                const value = hasAttr ? parseAttributeValue(this.getAttribute(attrName)) : defaults[propName];
+                if (definitions[propName]) {
+                    this._validateProp(propName, value, definitions[propName]);
+                }
+                if (hasAttr || propName in defaults) {
+                    this.props[propName] = value;
+                }
+            }
+            devtools.emit(DevToolsEvents.COMPONENT_MOUNT, this);
+            // DevTools integration: Notify the bridge when props change
+            this._scope.run(() => {
+                watch(() => this.props, () => {
+                    devtools.emit('component:update', {
+                        id: this._can_id,
+                        props: { ...this.props }
+                    });
+                }, { deep: true });
+            });
+            this._scope.run(() => {
+                let isInitialRender = true;
+                // Create the render runner
+                const renderRunner = () => {
+                    const instance = this;
+                    // Lifecycle: onBeforeUpdate (only on subsequent renders)
+                    if (!isInitialRender) {
+                        instance[LifecycleHooks.BEFORE_UPDATE]?.forEach((h) => h());
+                        if (instance.onBeforeUpdate)
+                            instance.onBeforeUpdate();
+                    }
+                    // Execute render with a proxied context for auto-unwrapping .value
+                    const context = proxyRefs(this);
+                    let content;
+                    content = this.render.call(context);
+                    // If the render method returns a DocumentFragment or Node, mount it
+                    if (content instanceof Node && this.shadowRoot) {
+                        // Hydration check: if ShadowRoot already has content (Declarative Shadow DOM)
+                        // skip the initial clear and append during the first render.
+                        if (isInitialRender && this.shadowRoot.hasChildNodes()) {
+                            // Handled by hydration logic
+                        }
+                        else {
+                            this.shadowRoot.innerHTML = '';
+                            this.shadowRoot.appendChild(content);
+                        }
+                    }
+                    // Lifecycle: onUpdated (only on subsequent renders)
+                    if (!isInitialRender) {
+                        queuePostFlushJob(() => {
+                            instance[LifecycleHooks.UPDATED]?.forEach((h) => h());
+                            if (instance.onUpdated)
+                                instance.onUpdated();
+                        });
+                    }
+                    isInitialRender = false;
+                };
+                // Initialize the effect as lazy so the variable is assigned before first run
+                this._renderEffect = effect(renderRunner, {
+                    lazy: true,
+                    // queueJob ensures this re-renders in the next microtask batch
+                    scheduler: () => queueJob(this._renderEffect)
+                });
+                // Execute initial render manually now that _renderEffect is assigned
+                this._renderEffect();
+            });
+        }
+    }
+    disconnectedCallback() {
+        console.log('Element disconnected from the DOM');
+        devtools.emit(DevToolsEvents.COMPONENT_UNMOUNT, this);
+        // This stops the render effect AND any other effect/watch 
+        // created within the component's scope.
+        this._scope.stop();
+        if (this._renderEffect) {
+            this._renderEffect = null;
+        }
+        this._isMounted = false;
+    }
+    adoptedCallback() {
+        console.log('Element adopted to a new document');
+    }
+    focus(options) {
+        super.focus(options);
+    }
+    /**
+     * Renders the component. Override this method to implement custom rendering logic.
+     */
+    render() {
+        // The compiled component overrides this to return a DOM tree.
+        // If manually called, we trigger the reactive effect if it exists.
+        // Otherwise, this serves as a hook for the initial render.
+        this._renderEffect?.();
+    }
+    /**
+     * Dispatches a custom event.
+     * @param name The name of the event.
+     * @param detail The data to pass with the event.
+     * @param options Additional event options.
+     */
+    emit(name, detail, options) {
+        const event = new CustomEvent(name, {
+            bubbles: true,
+            composed: true,
+            cancelable: true,
+            detail,
+            ...options
+        });
+        this.dispatchEvent(event);
+    }
+}
+export function defineCustomElement(name, component, // The actual component class
+options) {
+    if (customElements.get(name)) {
+        return;
+    }
+    // Create a wrapper class to inject the template and observed attributes
+    const ComponentWrapper = class extends component {
+        static get observedAttributes() {
+            return options?.observedAttributes || component.observedAttributes || [];
+        }
+        constructor() {
+            super();
+        }
+    };
+    // Filter out our custom 'observedAttributes' so only valid native options 
+    // are passed to the customElements.define API.
+    const nativeOptions = options?.extends
+        ? { extends: options.extends }
+        : undefined;
+    customElements.define(name, ComponentWrapper, nativeOptions);
+}
+//# sourceMappingURL=customElement.mjs.map

@@ -1,5 +1,4 @@
 import { Dep, createDep } from './dep';
-import { queueJob } from '../runtime-core/scheduler';
 
 export type ReactiveEffect<T = any> = {
     (): T;
@@ -104,7 +103,7 @@ export function triggerEffects(dep: Dep) {
         if (effect.scheduler) {
             effect.scheduler();
         } else {
-            queueJob(effect);
+            effect();
         }
     }
 }

@@ -1,19 +1,99 @@
+import { signal } from '@decaspace/can-framework';
+
 component HelloWorld {
     var props = ['msg'];
+
+    var count = signal(0);
+
+    function inc() {
+        this.count.value++;
+    }
+
+    function dec() {
+        this.count.value--;
+    }
+
     var template = `
-        <div class="hello-box">
-            <h2>{{msg}}</h2>
-            <p>Edit <code>src/App.can</code> to start building your application.</p>
-            <div class="links">
-                <a href="https://github.com/can-framework" target="_blank">Documentation</a>
-                <a href="https://github.com/can-framework" target="_blank">GitHub</a>
+        <section id="demo" class="demo-wrap">
+            <div class="demo-card">
+                <div class="demo-head">
+                    <span class="pill">Live · Signal-powered</span>
+                    <h3>{{msg}}</h3>
+                    <p>This counter is a <b>Signal</b> updated in real time — no manual DOM work, no full-page re-render.</p>
+                </div>
+                <div class="reactor">
+                    <button class="r-btn" @click="dec" aria-label="Decrease">−</button>
+                    <span class="r-value">{{count.value}}</span>
+                    <button class="r-btn" @click="inc" aria-label="Increase">+</button>
+                </div>
+                <div class="hint"><code>var count = signal(0)</code></div>
             </div>
-        </div>
+        </section>
     `;
 }
 
 <style scoped>
-.hello-box { text-align: center; margin-top: 2rem; }
-.links { margin-top: 1rem; }
-.links a { color: #42b883; margin: 0 10px; text-decoration: none; font-weight: bold; }
+button { font-family: inherit; }
+.demo-wrap { max-width: 960px; margin: 0 auto; padding: 2rem 1rem; }
+.demo-card {
+    background: linear-gradient(160deg, rgba(255,255,255,0.07), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 2.5rem;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+}
+.pill {
+    display: inline-block;
+    background: rgba(66,184,131,0.15);
+    color: #5ad6a3;
+    border: 1px solid rgba(66,184,131,0.4);
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+.demo-card h3 { font-size: 1.6rem; margin: 1rem 0 0.4rem; color: #fff; }
+.demo-card p { color: #a7b0c2; max-width: 520px; margin: 0 auto; }
+.reactor {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1.4rem;
+    margin: 2rem 0 1.2rem;
+}
+.r-btn {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    border: 1px solid rgba(66,184,131,0.5);
+    background: rgba(66,184,131,0.12);
+    color: #42b883;
+    font-size: 1.8rem;
+    line-height: 1;
+    padding: 0;
+    font-weight: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+.r-btn:hover { background: #42b883; color: #0b0f1a; transform: scale(1.08); }
+.r-value {
+    min-width: 90px;
+    font-size: 3rem;
+    font-weight: 800;
+    color: #fff;
+    text-shadow: 0 0 24px rgba(66,184,131,0.55);
+}
+.hint code {
+    background: rgba(0,0,0,0.35);
+    color: #8ee6bd;
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+}
+@media (max-width: 520px) {
+    .demo-card { padding: 1.6rem; }
+    .r-value { font-size: 2.4rem; }
+    .r-btn { width: 54px; height: 54px; }
+}
 </style>

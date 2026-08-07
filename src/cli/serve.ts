@@ -56,10 +56,10 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
         fs.readFile(filePath, (error, content) => {
             if (error) {
                 if (error.code == 'ENOENT') {
-                    res.writeHead(404);
+                    res.writeHead(404, { 'Cache-Control': 'no-store' });
                     res.end('File not found');
                 } else {
-                    res.writeHead(500);
+                    res.writeHead(500, { 'Cache-Control': 'no-store' });
                     res.end('Server Error: ' + error.code);
                 }
             } else {
@@ -113,10 +113,12 @@ export async function serve(port: number = 3000, isProd: boolean = false) {
                         : '<script type="module" src="/main.mjs"></script>';
 
                     const html = content.toString().replace('</body>', entryScript + mockScript + hmrScript + '</body>');
-                    res.writeHead(200, { 'Content-Type': contentType });
+                    // 'no-store' prevents the browser from caching modules, which
+                    // would otherwise serve stale bundles after a code change.
+                    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
                     res.end(html, 'utf-8');
                 } else {
-                    res.writeHead(200, { 'Content-Type': contentType });
+                    res.writeHead(200, { 'Content-Type': contentType, 'Cache-Control': 'no-store' });
                     res.end(content, 'utf-8');
                 }
             }

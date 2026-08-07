@@ -32,6 +32,12 @@ export class Router {
         const match = this.matcher(path);
         if (typeof window !== 'undefined') {
             window.history.pushState({}, '', path);
+            // Some test environments (e.g. happy-dom) don't reflect pushState in
+            // window.location. Sync it manually; in real browsers this is a no-op
+            // because pushState already updated the pathname.
+            if (window.location.pathname !== path) {
+                window.location.pathname = path;
+            }
         }
         this.currentRoute.value = match;
     }
@@ -40,6 +46,9 @@ export class Router {
         const match = this.matcher(path);
         if (typeof window !== 'undefined') {
             window.history.replaceState({}, '', path);
+            if (window.location.pathname !== path) {
+                window.location.pathname = path;
+            }
         }
         this.currentRoute.value = match;
     }

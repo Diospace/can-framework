@@ -155,13 +155,7 @@ export async function transpile(content: string, plugins: CompilerPlugin[] = [],
         // Simple runtime injection
         cssInjectionCode = `
 const _scopeId = '${descriptor.scopeId}';
-let _style = document.querySelector(\`style[data-can-scope="\${_scopeId}"]\`);
-if (!_style) {
-    _style = document.createElement('style');
-    _style.setAttribute('data-can-scope', _scopeId);
-    document.head.appendChild(_style);
-}
-_style.textContent = \`${css.replace(/`/g, '\\`')}\`;`;
+const _canCss = \`${css.replace(/`/g, '\\`')}\`;`;
     }
 
     //       const outputTemplate= `import { Component } from '../runtime-core/Component';
@@ -205,6 +199,8 @@ export class ${name} extends _baseClass {
   static get observedAttributes() { return _observedAttrs; }
   static get defaultProps() { return ${JSON.stringify(descriptor.defaultProps)}; }
   static get propDefinitions() { return ${JSON.stringify(descriptor.propDefinitions)}; }
+  static get _canScopeId() { return _scopeId; }
+  static get _canCss() { return _canCss || ''; }
 
  \n${script}\n    
 render(): DocumentFragment {\n        

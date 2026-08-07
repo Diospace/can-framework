@@ -162,7 +162,6 @@ export class CanElement extends GlobalHTMLElement {
     }
 
     connectedCallback() {
-        console.log('Element connected to the DOM');
         if (!this._isMounted) {
             this._isMounted = true;
 
@@ -227,6 +226,16 @@ export class CanElement extends GlobalHTMLElement {
                             this.shadowRoot.innerHTML = '';
                             this.shadowRoot.appendChild(content);
                         }
+                        // Scoped component styles must live inside the shadow root:
+                        // document-level styles do not penetrate Shadow DOM encapsulation.
+                        const ctor: any = this.constructor;
+                        const css = ctor._canCss;
+                        if (css && !this.shadowRoot.querySelector(`style[data-can-scope]`)) {
+                            const styleEl = document.createElement('style');
+                            styleEl.setAttribute('data-can-scope', ctor._canScopeId || '');
+                            styleEl.textContent = css;
+                            this.shadowRoot.appendChild(styleEl);
+                        }
                     }
 
                     // Lifecycle: onUpdated (only on subsequent renders)
@@ -254,8 +263,6 @@ export class CanElement extends GlobalHTMLElement {
     }
 
     disconnectedCallback() {
-        console.log('Element disconnected from the DOM');
-        
         devtools.emit(DevToolsEvents.COMPONENT_UNMOUNT, this);
 
         // This stops the render effect AND any other effect/watch 
@@ -269,7 +276,6 @@ export class CanElement extends GlobalHTMLElement {
     }
 
     adoptedCallback() {
-        console.log('Element adopted to a new document');
     }
 
     focus(options?: FocusOptions) {
@@ -304,11 +310,31 @@ export class CanElement extends GlobalHTMLElement {
     }
 }
 
+/**
+ * Resolves the custom element tag name for a component class.
+ * Prefers the tag recorded by defineCustomElement, otherwise derives
+ * a kebab-case name (prefixed with 'can-' when it has no dash).
+ */
+export function getComponentTagName(component: any): string {
+    if (component && component.__canTagName) {
+        return component.__canTagName;
+    }
+    const kebabName = (component?.name || 'component')
+        .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+        .toLowerCase();
+    return kebabName.includes('-') ? kebabName : 'can-' + kebabName;
+}
+
 export function defineCustomElement(
     name: string,
     component: CustomElementConstructor, // The actual component class
     options?: ElementDefinitionOptions & { observedAttributes?: string[] }
 ) {
+    // Record the registered tag on the class so runtime helpers can create
+    // instances via document.createElement() (required by the HTML spec —
+    // HTMLElement subclasses cannot be constructed with `new`).
+    (component as any).__canTagName = name;
+
     if (customElements.get(name)) {
         return;
     }

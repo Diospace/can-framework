@@ -27,63 +27,10 @@ This directory contains logic for using the Can Framework directly in the browse
 </script>
 ```
 
+## Building
 
+- **Main bundle**: `npm run build:bundle` (webpack)
+- **CDN bundles**: `npm run build:cdn` and `npm run build:cdn:modern` (or `npm run build:cdn:all` for both)
+- **Tests**: `npm run test`
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-<div id="app">
-  <h1>{{ title }}</h1>
-  <p>Count is: {{ count }}</p>
-  <p>Double is: {{ doubleCount }}</p>
-  <button @click="increment">Increment</button>
-  <div c-if="count > 5">You reached a high score!</div>
-</div>
-
-<script src="path/to/can.runtime.min.js"></script>
-<script>
-  const { createApp } = Can;
-
-  createApp({
-    data() {
-      return { 
-        title: 'Hello Can Framework!',
-        count: 0 
-      };
-    },
-    computed: {
-      doubleCount() {
-        return this.count * 2;
-      }
-    },
-    methods: {
-      increment() {
-        this.count++;
-      }
-    },
-    mounted() {
-      console.log('App is ready!');
-    }
-  }).mount('#app');
-</script>
-
-
-To create your main bundle: npm run build:bundle
-To create your CDN version: npm run build:cdn
-npm run build:cdn:all
-To run your tests: npm run test
-
-
-
-npx webpack --config webpack.config.cdn.js
-
+The full `npm run build` pipeline (used by `npm run release`) builds all CDN assets into `dist/build/cdn/`.

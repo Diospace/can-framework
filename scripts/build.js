@@ -30,12 +30,12 @@ try {
 
 
 
-    if (process.argv.includes('--clear')) {
-        const distPath = path.resolve(__dirname, '../dist');
-        if (fs.existsSync(distPath)) {
-            console.log('\x1b[33m%s\x1b[0m', '>>> Purging dist directory...');
-            fs.rmSync(distPath, { recursive: true, force: true });
-        }
+    // Always purge dist: the downstream "can build" step is incremental (mtime-based)
+    // and can silently skip stale outputs, which would publish a broken package.
+    const distPath = path.resolve(__dirname, '../dist');
+    if (fs.existsSync(distPath)) {
+        console.log('\x1b[33m%s\x1b[0m', '>>> Purging dist directory for a guaranteed clean build...');
+        fs.rmSync(distPath, { recursive: true, force: true });
     }
 
     // 3. Run the comprehensive compilation (compile:all)

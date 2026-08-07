@@ -1,7 +1,7 @@
 import { Component } from '../runtime-core/Component';
 import { effect } from '../reactivity/effect';
 import { useRouter } from './Router';
-import { defineCustomElement } from '../runtime-dom/customElement';
+import { defineCustomElement, getComponentTagName } from '../runtime-dom/customElement';
 
 export class RouterView extends HTMLElement {
     render() {
@@ -19,7 +19,7 @@ export class RouterView extends HTMLElement {
 
                 if (match) {
                     const ComponentClass = match.component;
-                    const instance = new ComponentClass();
+                    const instance = document.createElement(getComponentTagName(ComponentClass)) as any;
                     // Pass extracted URL params as props to the component
                     Object.assign((instance as any).props, match.params);
                     container.appendChild(instance);

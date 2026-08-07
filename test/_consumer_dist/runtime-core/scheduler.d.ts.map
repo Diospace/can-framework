@@ -1,0 +1,1 @@
+{"version":3,"file":"scheduler.d.ts","sourceRoot":"","sources":["../../src/runtime-core/scheduler.ts"],"names":[],"mappings":"AAOA,wBAAgB,QAAQ,CAAC,GAAG,EAAE,QAAQ,QAGrC;AAED,wBAAgB,iBAAiB,CAAC,GAAG,EAAE,QAAQ,QAG9C;AAED;;;GAGG;AACH,wBAAgB,UAAU,YAEzB;AA2BD;;;GAGG;AACH,wBAAgB,QAAQ,CACpB,EAAE,CAAC,EAAE,MAAM,IAAI,GAChB,OAAO,CAAC,IAAI,CAAC,CAGf"}

@@ -22,3 +22,11 @@ To manage and run the API server, use the following commands:
 - **Structured Routing**: Uses `express.Router()` for organizing API endpoints.
 - **Global Error Handling**: Includes a global Express error handler to catch and report unhandled exceptions gracefully.
 - **Dynamic Routes**: Supports route parameters (e.g., `/users/:id`).
+
+## Dependencies
+
+The API server runs on the framework's **optional dependencies**: `express`, `cors`,
+`jsonwebtoken`, `bcryptjs`, `pg`, `typeorm`, and `reflect-metadata`. They are installed by
+default with `npm install`, but consumers who do not use the API feature can omit them with
+`npm install --omit=optional`. Only the CLI/compiler/runtime essentials are hard
+`dependencies` of the published package.

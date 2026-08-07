@@ -1,6 +1,5 @@
 import { LifecycleHooks, BEFORE_MOUNT, MOUNTED, BEFORE_UPDATE, UPDATED, BEFORE_UNMOUNT, UNMOUNTED, ERROR_CAPTURED, currentInstance, setCurrentInstance } from './apiLifecycle';
 import { CanElement } from '../runtime-dom/customElement';
-import { proxyRefs } from '../reactivity/ref';
 
 //export class Component extends HTMLElement {
 export class Component extends CanElement {
@@ -19,7 +18,9 @@ export class Component extends CanElement {
 
     constructor() {
         super();
-        return proxyRefs(this);
+        // NOTE: A custom element constructor must return the element itself,
+        // so we cannot `return proxyRefs(this)` here. Template rendering
+        // applies the proxy when invoking render() (see customElement.ts).
     }
 
     connectedCallback() {

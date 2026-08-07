@@ -24,7 +24,7 @@ component Carousel {
     
     // Composable Hooks
     var webpSupported = useWebP();
-    var swipe = useSwipe(this.containerRef);
+    var swipeState = useSwipe(this.containerRef);
     var parallax = useParallax(this.containerRef);
     var sound = useSound('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3', { volume: 0.5 });
 
@@ -60,7 +60,7 @@ component Carousel {
     var nextOpacity = signal(0);
 
     // Autoplay Logic
-    var auto = {
+    var autoTimer = {
         timerId: null,
         rafId: null,
         startTime: 0,
@@ -70,27 +70,27 @@ component Carousel {
     function startAuto() {
         if (!this.props.auto) return; // auto is already a boolean
         this.pauseAuto(); // Clear any existing timers
-        this.auto.remainingTime = this.props.autoTime || 10000;
+        this.autoTimer.remainingTime = this.props.autoTime || 10000;
         this.autoPaused.value = true; // So resumeAuto will run
         this.resumeAuto();
     }
 
     function stopAuto() {
-        clearTimeout(this.auto.timerId);
-        cancelAnimationFrame(this.auto.rafId);
-        this.auto.timerId = null;
-        this.auto.rafId = null;
+        clearTimeout(this.autoTimer.timerId);
+        cancelAnimationFrame(this.autoTimer.rafId);
+        this.autoTimer.timerId = null;
+        this.autoTimer.rafId = null;
         this.autoProgress.value = 0;
     }
 
     function pauseAuto() {
         if (this.props.auto && !this.autoPaused.value) { // auto is already a boolean
             this.autoPaused.value = true;
-            this.auto.remainingTime -= (performance.now() - this.auto.startTime);
-            clearTimeout(this.auto.timerId);
-            cancelAnimationFrame(this.auto.rafId);
-            this.auto.timerId = null;
-            this.auto.rafId = null;
+            this.autoTimer.remainingTime -= (performance.now() - this.autoTimer.startTime);
+            clearTimeout(this.autoTimer.timerId);
+            cancelAnimationFrame(this.autoTimer.rafId);
+            this.autoTimer.timerId = null;
+            this.autoTimer.rafId = null;
         }
     }
 
@@ -98,24 +98,24 @@ component Carousel {
         if (this.props.auto && this.autoPaused.value) { // auto is already a boolean
             this.autoPaused.value = false;
             
-            if (this.auto.remainingTime <= 0) {
-                this.auto.remainingTime = this.props.autoTime || 10000;
+            if (this.autoTimer.remainingTime <= 0) {
+                this.autoTimer.remainingTime = this.props.autoTime || 10000;
             }
             
-            this.auto.startTime = performance.now();
+            this.autoTimer.startTime = performance.now();
 
-            this.auto.timerId = setTimeout(() => {
+            this.autoTimer.timerId = setTimeout(() => {
                 this.next();
-            }, this.auto.remainingTime);
+            }, this.autoTimer.remainingTime);
 
             if (this.props.progressBar) {
                 const autoDuration = this.props.autoTime || 10000;
                 const animateProgress = () => {
-                    if (this.autoPaused.value || !this.auto.timerId) return;
-                    const elapsed = performance.now() - this.auto.startTime;
-                    const currentProgress = ((autoDuration - (this.auto.remainingTime - elapsed)) / autoDuration) * 100;
+                    if (this.autoPaused.value || !this.autoTimer.timerId) return;
+                    const elapsed = performance.now() - this.autoTimer.startTime;
+                    const currentProgress = ((autoDuration - (this.autoTimer.remainingTime - elapsed)) / autoDuration) * 100;
                     this.autoProgress.value = Math.min(currentProgress, 100);
-                    if (this.autoProgress.value < 100) this.auto.rafId = requestAnimationFrame(animateProgress);
+                    if (this.autoProgress.value < 100) this.autoTimer.rafId = requestAnimationFrame(animateProgress);
                 };
                 animateProgress();
             }
@@ -316,9 +316,9 @@ component Carousel {
 
         // Swipe Listener
         effect(() => {
-            if (this.props.swipe && this.swipe.direction.value) {
-                if (this.swipe.direction.value === 'left') this.next(); // Swipe left means go to next slide
-                if (this.swipe.direction.value === 'right') this.prev(); // Swipe right means go to previous slide
+            if (this.props.swipe && this.swipeState.direction.value) {
+                if (this.swipeState.direction.value === 'left') this.next(); // Swipe left means go to next slide
+                if (this.swipeState.direction.value === 'right') this.prev(); // Swipe right means go to previous slide
             }
         });
     }
@@ -347,7 +347,7 @@ component Carousel {
     }
 
     function toggleAuto() {
-        if (this.auto.timerId) {
+        if (this.autoTimer.timerId) {
             this.stopAuto();
             this.autoPaused.value = true;
         } else {
@@ -450,7 +450,7 @@ component Carousel {
             </div>
 
             <!-- Slides -->
-            <div c-for="slide in slides" 
+            <div c-for="slide in slides.value" 
                  class="slide-wrapper"
                  style="{{ getSlideStyle(index) }}">
 
@@ -486,7 +486,7 @@ component Carousel {
 
             <!-- Bullets -->
             <div c-if="props.bullets" class="vanilla-slider-bullet-container" style="opacity: {{ (props.bulletsHide && !isHovered.value) ? 0 : 1 }}">
-                <span c-for="slide in slides" 
+                <span c-for="slide in slides.value" 
                       class="vanilla-slider-bullet"
                       style="color: {{ index === currentIndex.value ? (props.bulletColor || 'red') : '#fff' }}"
                       @click="() => this.goTo(index)">

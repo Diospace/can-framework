@@ -17,6 +17,9 @@ import { warn } from '../../src/shared';
 import { Suspense } from '../../src/runtime-core/Suspense';
 import { Teleport } from '../../src/runtime-core/Teleport';
 import { inject } from '../../src/runtime-core/apiInject';
+import { Form, FormInput } from '../../src/runtime-core/formComponents';
+import { createForm } from '../../src/runtime-core/form';
+import { parseAttributeValue } from '../../src/runtime-dom/attributeUtils';
 
 /**
  * Global registry for components defined via createApp().component()
@@ -31,6 +34,219 @@ const globalDirectives = new Map<string, any>();
 // Register built-in components by default
 globalComponents.set('suspense', Suspense);
 globalComponents.set('teleport', Teleport);
+
+const GlobalHTMLElement = typeof globalThis.HTMLElement !== 'undefined' ? globalThis.HTMLElement : (class {} as any);
+
+const kebabToCamel = (s: string) => s.replace(/-./g, x => x[1].toUpperCase());
+
+/**
+ * Registry of values provided by class-based components that are rendered into the
+ * light DOM. Mirrors the provide/inject tree that normally lives on live custom
+ * element instances (which are bypassed by the CDN light-DOM rendering path).
+ */
+const providesRegistry = new WeakMap<HTMLElement, Record<string, any>>();
+
+function isClassComponent(def: any): boolean {
+    return typeof def === 'function' &&
+        def.prototype &&
+        typeof def.prototype.render === 'function' &&
+        (def.prototype instanceof GlobalHTMLElement);
+}
+
+function lookupProvide(el: HTMLElement, key: string, scope: any): any {
+    let node: HTMLElement | null = el.parentElement;
+    while (node) {
+        const provides = providesRegistry.get(node);
+        if (provides && key in provides) return provides[key];
+        node = node.parentElement;
+    }
+    return scope?._context?.provides?.[key];
+}
+
+function wireClassComponentEvents(el: HTMLElement, comp: any) {
+    if (comp instanceof Form) {
+        const formEl = el.querySelector('form');
+        if (formEl) {
+            formEl.addEventListener('submit', (e: Event) => {
+                e.preventDefault();
+                // Keep native submit from bubbling up to @submit listeners on the host
+                e.stopPropagation();
+                comp.form.submit();
+            });
+        }
+    } else if (comp instanceof FormInput) {
+        const inputEl = el.querySelector('input');
+        if (inputEl) {
+            inputEl.addEventListener('input', (e: Event) => {
+                if (comp.form && comp.props.name) {
+                    comp.form.setFieldValue(comp.props.name, (e.target as HTMLInputElement).value);
+                }
+            });
+            inputEl.addEventListener('blur', () => {
+                if (comp.form && comp.props.name) {
+                    comp.form.setFieldTouched(comp.props.name);
+                }
+            });
+        }
+    }
+}
+
+/**
+ * Renders a class-based custom element (Form, FormInput, or any user class that
+ * extends HTMLElement and implements render()) into the element's light DOM,
+ * emulating the custom element lifecycle that shadow-DOM registration skips.
+ */
+function handleClassComponent(el: HTMLElement, compDef: any, scope: any, hydrating = false) {
+    // 1. Instantiate the component
+    const comp = new compDef();
+
+    // 2. Sync observed attributes into the reactive props object
+    const observed = compDef.observedAttributes || [];
+    for (const attrName of observed) {
+        if (el.hasAttribute(attrName)) {
+            comp.props[kebabToCamel(attrName)] = parseAttributeValue(el.getAttribute(attrName));
+        }
+    }
+
+    // 3. Wire up form-specific state (light-DOM replacement for connectedCallback)
+    if (comp instanceof Form) {
+        comp.form = createForm({
+            onSubmit: (values: any) => {
+                el.dispatchEvent(new CustomEvent('submit', { detail: values, bubbles: true, composed: true }));
+            }
+        });
+        comp.provide('form', comp.form);
+        providesRegistry.set(el, { form: comp.form });
+    } else if (comp instanceof FormInput) {
+        comp.form = lookupProvide(el, 'form', scope);
+        if (comp.form && comp.props.name) {
+            const asyncMethodName = comp.props['async-validator'] || comp.props.asyncValidator;
+            const asyncValidator = asyncMethodName && typeof comp[asyncMethodName] === 'function'
+                ? comp[asyncMethodName].bind(comp)
+                : null;
+            comp.form.registerField(comp.props.name, {
+                required: comp.props.required,
+                pattern: comp.props.pattern,
+                minLength: comp.props.minlength,
+                maxLength: comp.props.maxlength,
+                messages: {
+                    required: comp.props['msg-required'] || comp.props.msgRequired,
+                    pattern: comp.props['msg-pattern'] || comp.props.msgPattern,
+                    minLength: comp.props['msg-minlength'] || comp.props.msgMinLength,
+                    maxLength: comp.props['msg-maxlength'] || comp.props.msgMaxLength
+                },
+                asyncValidator
+            });
+        }
+    }
+
+    // 4. Provide injection + interpolation context
+    comp.inject = (key: string) => lookupProvide(el, key, scope);
+    comp._context = scope._context || null;
+
+    setCurrentInstance(comp);
+
+    // 5. Render into the light DOM with reactive updates
+    const originalChildren = Array.from(el.childNodes);
+    const renderRunner = () => {
+        el.innerHTML = '';
+        const content = comp.render();
+        if (content instanceof Node) {
+            el.appendChild(content);
+        }
+        // Distribute original light-DOM children into the first <slot>
+        if (originalChildren.length) {
+            const slot = el.querySelector('slot');
+            if (slot) originalChildren.forEach(child => slot.appendChild(child));
+        }
+        wireClassComponentEvents(el, comp);
+    };
+
+    comp._scope.run(() => {
+        effect(renderRunner);
+    });
+
+    // 6. Apply the component's own directives (@submit, :prop, etc.)
+    Array.from(el.attributes).forEach(({ name, value }) => {
+        if (name.startsWith('c-') || name.startsWith(':') || name.startsWith('@')) {
+            applyDirective(el, name, value, scope, hydrating);
+        }
+    });
+
+    setCurrentInstance(null);
+
+    // 7. Compile the rendered content
+    comp._scope.run(() => {
+        Array.from(el.childNodes).forEach(child => {
+            compileDOM(child as HTMLElement, comp, hydrating);
+        });
+    });
+}
+
+/**
+ * Framework primitive: <router-view> renders the matched route component
+ * reactively, without requiring explicit component registration.
+ */
+function handleRouterView(el: HTMLElement, scope: any, hydrating = false) {
+    const router = lookupProvide(el, 'router', scope);
+    if (!router) {
+        warn('[Router] <router-view> used without a router. Did you call app.use(router)?');
+        return;
+    }
+
+    let viewScope: EffectScope | null = null;
+    effect(() => {
+        // Stop the previous view's effects before re-rendering
+        viewScope?.stop();
+        viewScope = new EffectScope();
+
+        el.innerHTML = '';
+        const match = router.currentRoute.value;
+
+        if (match) {
+            const container = document.createElement('div');
+            container.style.display = 'contents';
+            el.appendChild(container);
+
+            viewScope.run(() => {
+                const def = match.component;
+                if (isClassComponent(def)) {
+                    handleClassComponent(container, def, scope, hydrating);
+                } else {
+                    const template = typeof def === 'string' ? def : def?.template;
+                    Object.keys(match.params || {}).forEach(key => {
+                        container.setAttribute(key, match.params[key]);
+                    });
+                    container.innerHTML = template || '';
+                    compileDOM(container, scope, hydrating);
+                }
+            });
+        } else {
+            el.textContent = '404 - Not Found';
+        }
+    });
+}
+
+/**
+ * Framework primitive: <router-link> turns its content into a navigation anchor
+ * and pushes the target route on click.
+ */
+function handleRouterLink(el: HTMLElement, scope: any) {
+    const router = lookupProvide(el, 'router', scope);
+    const to = el.getAttribute('to') || '/';
+
+    const anchor = document.createElement('a');
+    anchor.setAttribute('href', to);
+    while (el.firstChild) anchor.appendChild(el.firstChild);
+    el.appendChild(anchor);
+
+    if (router) {
+        el.addEventListener('click', (e: Event) => {
+            e.preventDefault();
+            router.push(to);
+        });
+    }
+}
 
 /**
  * Cache for compiled expressions to avoid the overhead of `new Function`
@@ -116,7 +332,24 @@ function handleElement(el: HTMLElement, scope: any, hydrating = false): boolean 
     const tagName = el.tagName.toLowerCase();
     let compDef = globalComponents.get(tagName) as any;
 
+    // Framework primitives: Router (no explicit registration required)
+    if (tagName === 'router-view' && !compDef) {
+        handleRouterView(el, scope, hydrating);
+        return false;
+    }
+    if (tagName === 'router-link' && !compDef) {
+        handleRouterLink(el, scope);
+        return false;
+    }
+
     if (compDef) {
+        // Class-based custom elements are rendered into the light DOM with their
+        // lifecycle emulated (connectedCallback / shadow DOM are not available here).
+        if (isClassComponent(compDef)) {
+            handleClassComponent(el, compDef, scope, hydrating);
+            return false;
+        }
+
         // Support for Class-based components (CanElement)
         // If the definition is a class, we resolve its template and props from an instance or prototype.
         let template = compDef.template;
@@ -310,7 +543,11 @@ function handleElement(el: HTMLElement, scope: any, hydrating = false): boolean 
         setCurrentInstance(null);
         
         compScope.run(() => {
-            compileDOM(el, compInstance, hydrating); 
+            // Compile only the children so the component element itself isn't
+            // re-processed as a component (which would recurse infinitely).
+            Array.from(el.childNodes).forEach(child => {
+                compileDOM(child as HTMLElement, compInstance, hydrating);
+            });
         });
 
         // Trigger mounted hook for the component
@@ -424,7 +661,9 @@ function applyDirective(el: HTMLElement, name: string, exp: string, scope: any, 
             // If expression returned a function (e.g., @click="increment"), 
             // we call it. If it was a statement (e.g., @click="count++"), evaluate already ran it.
             if (typeof handler === 'function') {
-                handler.call(scope, e);
+                // Custom events carry their payload in `detail` (Vue-style $emit convention)
+                const payload = e instanceof CustomEvent && e.detail !== undefined ? e.detail : e;
+                handler.call(scope, payload);
             }
             // If it was an inline statement (like count++), evaluate handled the execution
             // and we don't need to do anything further.

@@ -7,7 +7,7 @@ This directory contains the source code for the Can Framework Command Line Inter
 ### `build.ts`
 This script handles the compilation of the project. It recursively traverses the source directories, transpiling `.can` files (using the custom compiler) and `.ts` files (using TypeScript) into standard ES Modules (`.mjs`) outputted to the `dist/` directory. It also handles import path adjustments for the build artifacts.
 - **Incremental Compilation**: Compares file modification times (`mtime`) to skip files that haven't changed, significantly speeding up the build process.
-- **Fresh Builds**: Supports the `--clear` flag to wipe the `dist/` directory before starting.
+- **Fresh Builds**: Supports the `--clear` flag to wipe the `dist/` directory before starting. The full build pipeline (`npm run build` → `scripts/build.js`) **always purges `dist/` first** and then runs this incremental step, so a stale output can never be published.
 - **Targeted Builds**: Can process a single file, which is used by the dev server for near-instant updates.
 
 ### `create.ts`

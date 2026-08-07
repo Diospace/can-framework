@@ -311,10 +311,26 @@ export function genSingleNode(node: Node, varName: string, startIndex: number, a
                      code += `  else ${varName}_trans.leave();\n`;
                      code += `});\n`;
                      }
-                } else if (isComponent) {
+} else if (isComponent) {
                      if (typeof value !== 'string') continue;
-                     code += `${varName}.props["${key}"] = ${value.startsWith('{') ? value.slice(1, -1) : JSON.stringify(value)};\n`;
-                } else {
+                     let propExpr: string;
+                     if (value.includes('{{')) {
+                         // Interpolation binding: msg="{{message}}" → template literal with this-qualified expr
+                         propExpr = '`' + value.replace(/{{(.*?)}}/g, (_match: string, p1: string) => {
+                             return '${' + processExpression(p1.trim(), locals) + '}';
+                         }) + '`';
+                     } else if (value.startsWith('{') && value.endsWith('}') && !value.includes(':')) {
+                         // Expression binding: msg={expr}
+                         propExpr = processExpression(value.slice(1, -1).trim(), locals);
+                     } else {
+                         propExpr = JSON.stringify(value);
+                     }
+                     if (isStatic) {
+                         code += `${varName}.props["${key}"] = ${propExpr};\n`;
+                     } else {
+                         code += `effect(() => ${varName}.props["${key}"] = ${propExpr});\n`;
+                     }
+                 } else {
                      if (typeof value === 'string' && value.includes('{{')) {
                         const expr: string = '`' + value.replace(/{{(.*?)}}/g, (_match: string, p1: string) => {
                             return '${' + processExpression(p1.trim(), locals) + '}';

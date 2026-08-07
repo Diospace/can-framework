@@ -1068,6 +1068,7 @@ export function useSwipe(target: HTMLElement | (() => HTMLElement | null) | Sign
     
     let startX = 0;
     let startY = 0;
+    let cleanup: (() => void) | null = null;
 
     if (typeof window !== 'undefined') {
         const onTouchStart = (e: TouchEvent) => {
@@ -1097,8 +1098,30 @@ export function useSwipe(target: HTMLElement | (() => HTMLElement | null) | Sign
             isSwiping.value = false;
         };
 
-        useEventListener(target as any, 'touchstart', onTouchStart as any);
-        useEventListener(target as any, 'touchend', onTouchEnd as any);
+        // Resolve the target like useParallax does: support a raw element,
+        // a signal, or a getter function so the listeners attach once the
+        // element is available.
+        effect(() => {
+            if (cleanup) { cleanup(); cleanup = null; }
+
+            let el: HTMLElement | null;
+            if (isSignal(target)) el = (target as Signal<HTMLElement | null>).value;
+            else if (typeof target === 'function') el = (target as () => HTMLElement | null)();
+            else el = target;
+
+            if (el) {
+                el.addEventListener('touchstart', onTouchStart as any);
+                el.addEventListener('touchend', onTouchEnd as any);
+                cleanup = () => {
+                    el!.removeEventListener('touchstart', onTouchStart as any);
+                    el!.removeEventListener('touchend', onTouchEnd as any);
+                };
+            }
+        });
+
+        onUnmounted(() => {
+            if (cleanup) cleanup();
+        });
     }
 
     return { direction, isSwiping };

@@ -74,12 +74,12 @@ async function run() {
             break;
         case 'serve':
             const { serve } = await import('./serve');
-            const port = args[1] ? parseInt(args[1]) : 3000;
+            const port = parsePort(args[1], showServeHelp);
             await serve(port);
             break;
         case 'preview':
             const { serve: serveProd } = await import('./serve');
-            const previewPort = args[1] ? parseInt(args[1]) : 3000;
+            const previewPort = parsePort(args[1], showServeHelp);
             await serveProd(previewPort, true);
             break;
         case 'disk':
@@ -109,6 +109,24 @@ function showHelp() {
     console.log('  \x1b[36mpreview [port]\x1b[0m Start production preview server (default: 3000)\n');
     console.log('  \x1b[36mdisk\x1b[0m           Analyze project disk usage');
     console.log('  \x1b[36moptimize [dir]\x1b[0m Pre-compile template expressions for production\n');
+}
+
+/**
+ * Parses a CLI port argument, tolerating help flags and invalid values.
+ * A missing/invalid port falls back to the default (3000).
+ */
+function parsePort(raw: string | undefined, help: () => void): number {
+    if (!raw || raw === '--help' || raw === '-h') {
+        help();
+    }
+    const parsed = raw ? parseInt(raw, 10) : NaN;
+    return Number.isNaN(parsed) || parsed < 0 || parsed > 65535 ? 3000 : parsed;
+}
+
+function showServeHelp() {
+    console.log('\x1b[32mUsage:\x1b[0m can serve [port]   (default: 3000)\n');
+    console.log('  Starts the development server with HMR, serving the compiled app at http://localhost:<port>');
+    console.log('  \x1b[36mserve --help\x1b[0m       Show this help text\n');
 }
 
 run().catch(err => {

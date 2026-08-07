@@ -1,4 +1,5 @@
 import { Component } from './Component';
+import { getComponentTagName } from '../runtime-dom/customElement';
 import { reactive } from '../reactivity/index';
 import { devtools } from '../devtools';
 import { Directive } from './directives/baseDirective';
@@ -73,8 +74,10 @@ export function createApp(rootComponent: new () => Component): App {
                 
                 if (!container) return;
 
-                // Instantiate the root Web Component
-                const instance = new rootComponent();
+                // Create the root Web Component via the custom elements registry.
+                // Direct `new` on an HTMLElement subclass is illegal — the element
+                // must be constructed through document.createElement() instead.
+                const instance = document.createElement(getComponentTagName(rootComponent)) as any;
 
                 // Register built-in runtime directives
                 registerDirective('show', cShowDirective);
@@ -91,8 +94,10 @@ export function createApp(rootComponent: new () => Component): App {
                 // Attach context for error handling
                 (instance as any).appContext = context;
 
+                // Mounting the element connects it to the DOM, which triggers
+                // connectedCallback and the initial render into the shadow root.
                 container.innerHTML = '';
-                container.appendChild(instance.render());
+                container.appendChild(instance);
             }
         };
         return app;

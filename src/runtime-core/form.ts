@@ -11,7 +11,7 @@ export function createForm(options: { onSubmit: (values: any) => void }) {
 
     const fields: Record<string, any> = {};
 
-    const validateField = async (name: string) => {
+    const validateFieldSync = (name: string) => {
         const rules = fields[name];
         const value = state.values[name];
         let error = '';
@@ -25,21 +25,29 @@ export function createForm(options: { onSubmit: (values: any) => void }) {
             error = rules.messages?.pattern || 'Invalid format.';
         }
 
-        // 2. Async Validation
-        if (!error && rules.asyncValidator) {
-            state.validating[name] = true;
-            try {
-                const result = await rules.asyncValidator(value);
-                if (typeof result === 'string') error = result;
-            } catch (e) {
-                error = 'Validation failed.';
-            } finally {
-                state.validating[name] = false;
-            }
-        }
-
         state.errors[name] = error;
         return !error;
+    };
+
+    const validateField = async (name: string) => {
+        const rules = fields[name];
+        const value = state.values[name];
+
+        // 1. Sync Validation
+        const valid = validateFieldSync(name);
+        if (!valid || !rules.asyncValidator) return valid;
+
+        // 2. Async Validation
+        state.validating[name] = true;
+        try {
+            const result = await rules.asyncValidator(value);
+            if (typeof result === 'string') state.errors[name] = result;
+        } catch (e) {
+            state.errors[name] = 'Validation failed.';
+        } finally {
+            state.validating[name] = false;
+        }
+        return !state.errors[name];
     };
 
     return {
@@ -61,6 +69,19 @@ export function createForm(options: { onSubmit: (values: any) => void }) {
         async submit() {
             state.isSubmitting = true;
             const names = Object.keys(fields);
+
+            // Mark all fields as touched so validation errors surface after a submit attempt
+            names.forEach(n => state.touched[n] = true);
+
+            // Fast path: if no field uses an async validator, validate and emit synchronously
+            const hasAsync = names.some(n => fields[n].asyncValidator);
+            if (!hasAsync) {
+                const allValid = names.every(n => validateFieldSync(n));
+                if (allValid) options.onSubmit(state.values);
+                state.isSubmitting = false;
+                return;
+            }
+
             const results = await Promise.all(names.map(n => validateField(n)));
             
             if (results.every(r => r)) {

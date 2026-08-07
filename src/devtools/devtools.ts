@@ -60,11 +60,19 @@ class CanDevTools extends EventEmitter {
         super.emit(event, ...args);
 
         // Broadcast for browser extensions via postMessage
+        // Payloads may contain DOM nodes (e.g. a mounted component) which are not
+        // structured-cloneable, so flatten them to a JSON-safe representation first.
         if (typeof window !== 'undefined') {
+            let payload: any[] = args;
+            try {
+                payload = JSON.parse(JSON.stringify(args));
+            } catch {
+                payload = [];
+            }
             window.postMessage({
                 source: 'can-devtools-bridge',
                 event,
-                payload: args
+                payload
             }, '*');
         }
     }

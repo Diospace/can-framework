@@ -17,8 +17,26 @@ Clone the repository and install dependencies:
 
 ```bash
 npm install
-npm run compile # Compiles the framework core and CLI
+npm run build   # Cleans dist/, compiles the core + CLI, and bundles CDN assets
 ```
+
+> **Note**: `npm run build` **always starts from a clean `dist/` directory**. The build
+> purges `dist/` first and then runs an incremental compilation, so stale build artifacts
+> can never slip into a published package. The CLI binary is produced at
+> `dist/bundler/index.mjs`.
+
+## 📦 Dependency Layout
+
+The published package is intentionally dependency-light:
+
+- **Toolchain & runtime** (`dependencies`): `esbuild`, `htmlparser2`, `postcss`, `typescript`
+  — required by the CLI, the `.can` compiler, and the runtime.
+- **API server** (`optionalDependencies`): `express`, `cors`, `jsonwebtoken`, `bcryptjs`,
+  `pg`, `typeorm`, `reflect-metadata` — only needed when you use the built-in API server
+  (see `api/`). Installed by default; skip them with `npm install --omit=optional`.
+- **IDE / tooling** (`devDependencies`): everything used to build and test the framework
+  and the VS Code extension (`prettier`, `png-to-ico`, `vscode-*`, webpack, vitest, …).
+  Never shipped to consumers.
 
 ## 🛠️ CLI Usage
 
@@ -68,59 +86,24 @@ Endurance focuses on compiler-driven architectures and fine-grained reactivity t
 - **GitHub**: [Diospace](https://github.com/Diospace)
 - **Project**: Can Framework
 
+## 🔖 Releasing
 
- 
-# 1. Stage all your changes
+Releases are handled by `scripts/release.js`. Recommended flow:
+
+```bash
+# 1. Commit your work first (the release script refuses uncommitted changes)
 git add .
+git commit -m "feat: describe your change"
 
-# 2. Commit the changes with a descriptive message
-git commit -m "feat: add new store module logic"
+# 2. Bump the version (creates a commit and tag locally)
+npm version patch   # or minor / major
 
-# 3. Push to your main branch on GitHub
-git push origin main
-
-   
-
-# Increment version (patch, minor, or major)
-npm version patch
-
-# Push the commit and the new tag to GitHub
-git push origin main --tags
-
-# Create a tag for the current version (e.g., v1.0.4)
-git tag v1.0.4
-
-# Push only the specific tag
-git push origin v1.0.4
-
-
-# publish to npm
-  npm login 
-  npm run release
-
-
-
-  # 1. Stage all changes (tsconfig, create.ts, etc.)
-git add .
-
-# 2. Commit the improvements
-git commit -m "feat: improve framework linking, scaffolding, and release process"
-
-# 3. Update the version (this creates a new commit and tag locally)
-npm version patch
-
-# 4. Run the release script (this handles building, publishing to NPM, and pushing to GitHub)
+# 3. Publish (clean build → npm publish → git push + tags)
 npm run release
+```
 
-
-
-
-# Stage the optimized build logic and package configuration
-git add .
-
-# Commit with a descriptive message
-git commit -m "refactor: improve CLI build logic, support multiple targets, and optimize package distribution"
-
-# If you are ready to publish the new version (1.1.1 or 1.1.2)
-npm run release
+`npm run release` also verifies you are logged into npm (`npm whoami`) and that you are on
+the `main` branch. It runs the **clean** build pipeline, publishes to npm, creates the
+version tag, and pushes everything to GitHub. Run `npm test` beforehand to validate the
+release candidate.
 

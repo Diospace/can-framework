@@ -1,0 +1,88 @@
+import { reactive } from "../reactivity/index.mjs";
+export function createForm(options) {
+    const state = reactive({
+        values: {},
+        errors: {},
+        touched: {},
+        validating: {},
+        isSubmitting: false
+    });
+    const fields = {};
+    const validateFieldSync = (name) => {
+        const rules = fields[name];
+        const value = state.values[name];
+        let error = '';
+        // 1. Sync Validation
+        if (rules.required && !value) {
+            error = rules.messages?.required || 'This field is required.';
+        }
+        else if (rules.minLength && String(value).length < rules.minLength) {
+            error = rules.messages?.minLength || `Minimum length is ${rules.minLength}.`;
+        }
+        else if (rules.pattern && !new RegExp(rules.pattern).test(value)) {
+            error = rules.messages?.pattern || 'Invalid format.';
+        }
+        state.errors[name] = error;
+        return !error;
+    };
+    const validateField = async (name) => {
+        const rules = fields[name];
+        const value = state.values[name];
+        // 1. Sync Validation
+        const valid = validateFieldSync(name);
+        if (!valid || !rules.asyncValidator)
+            return valid;
+        // 2. Async Validation
+        state.validating[name] = true;
+        try {
+            const result = await rules.asyncValidator(value);
+            if (typeof result === 'string')
+                state.errors[name] = result;
+        }
+        catch (e) {
+            state.errors[name] = 'Validation failed.';
+        }
+        finally {
+            state.validating[name] = false;
+        }
+        return !state.errors[name];
+    };
+    return {
+        state,
+        registerField(name, rules = {}) {
+            fields[name] = rules;
+            state.values[name] = state.values[name] || '';
+        },
+        async setFieldValue(name, value) {
+            state.values[name] = value;
+            if (state.touched[name]) {
+                await validateField(name);
+            }
+        },
+        async setFieldTouched(name) {
+            state.touched[name] = true;
+            await validateField(name);
+        },
+        async submit() {
+            state.isSubmitting = true;
+            const names = Object.keys(fields);
+            // Mark all fields as touched so validation errors surface after a submit attempt
+            names.forEach(n => state.touched[n] = true);
+            // Fast path: if no field uses an async validator, validate and emit synchronously
+            const hasAsync = names.some(n => fields[n].asyncValidator);
+            if (!hasAsync) {
+                const allValid = names.every(n => validateFieldSync(n));
+                if (allValid)
+                    options.onSubmit(state.values);
+                state.isSubmitting = false;
+                return;
+            }
+            const results = await Promise.all(names.map(n => validateField(n)));
+            if (results.every(r => r)) {
+                options.onSubmit(state.values);
+            }
+            state.isSubmitting = false;
+        }
+    };
+}
+//# sourceMappingURL=form.mjs.map
