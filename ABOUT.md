@@ -43,6 +43,13 @@ npx @decaspace/can-framework create my-awesome-app
 Create a project
 npx can-framework create my-app
 
+The CLI bin is can (and can-framework), and create copies the templates. The npm command is:
+npx @decaspace/can-framework create my-app
+or, if the package is installed locally:
+npx can-framework create my-app
+Then cd my-app && npm install && npm run dev — opens at localhost:3000. If you want to test the freshly packed 1.1.9 tarball instead of the published npm version:
+npx -y @decaspace/can-framework@1.1.9 create my-app
+
 cd my-awesome-app
 npm install
 
